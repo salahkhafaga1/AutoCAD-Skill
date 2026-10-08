@@ -91,6 +91,22 @@ can be published. See `docs/development.md` for the release steps.
   exercises `help`, `version`, `install`, `doctor`, `update`, and migration
   against throwaway homes — 49 checks, no writes outside the sandbox.
 
+### Verification
+
+- Level 1 static skill validation: **PASS**, 0 violations (31 references,
+  29 MCP tools, 339 parameters) — re-run after the frontmatter change.
+- Level 2 offline MCP tests: **PASS**, 105 tests against the external
+  `autocad-mcp` checkout (unchanged this round).
+- Level 3 MCP wiring: **PASS**, re-observed — the running session now
+  advertises `engineering-cad` from the global install alongside the
+  project registration `engineering_agent`. The `/` menu UI was not driven.
+- Level 4 live AutoCAD: **PENDING** — AutoCAD is not installed on this
+  machine. **Not tested, not claimed.**
+- Installer suite: **PASS**, 61 tests. Packaged-tarball smoke test:
+  **PASS**, 49 checks. `npm pack --dry-run`: 57 files, 79.1 kB. Packaged skill
+  byte-identical to the repository source (38/38 SHA-256). Secret audit:
+  **CLEAN** (118 files, 0 pattern hits, 0 banned names).
+
 ---
 
 ## [0.2.0] - 2026-10-08

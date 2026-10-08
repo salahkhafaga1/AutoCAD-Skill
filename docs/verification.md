@@ -42,7 +42,7 @@ verification as available.
 |-------|-------|---------------------|
 | 1 — Static skill validation | File/tool/parameter/forbidden checks | **PASS** — automated, re-run after every change (`python tests/validate_skill.py`) |
 | 2 — Offline MCP tests | MCP server without AutoCAD | **PASS** — 105 tests, run against the external autocad-mcp checkout (no AutoCAD required) |
-| 3 — MCP wiring | Skill advertisement + MCP tool discovery in OpenCode | **PASS (2026-10-08, post-restructure)** — skill re-discovered and loaded live as `engineering_agent` with base directory `skill/engineering_agent/`; MCP server exposes 29 tools (config untouched) |
+| 3 — MCP wiring | Skill advertisement + MCP tool discovery in OpenCode | **PASS (2026-10-08, post-restructure; re-observed after the distribution fix)** — the running session advertises two entries: `engineering_agent` (project `opencode.json` → `skill/engineering_agent/`, the pre-fix registration) and `engineering-cad` (global `~/.config/opencode/skills/engineering-cad`, written by the installer — the binary `npx autocad-skill` runs). MCP config untouched; autocad-mcp still exposes 29 tools. The `/` **menu UI itself was not driven** — no `opencode` TUI is installed here. |
 | 4 — Live AutoCAD | Real drawing operations end to end | **PENDING** — AutoCAD is not installed on the development machine. **Not tested, not claimed.** |
 
 Rules for updating this table:
@@ -64,6 +64,7 @@ it proves nothing about AutoCAD or about skill behavior at run time.
 | Installer tests | CLI behavior of install, migration, update, rollback, doctor, version | **PASS** — 60 tests, run with `npm test` in `installer/npm/`, zero dependencies |
 | OpenCode discovery checks | Install target, skill ID, frontmatter, `skill` permission | **PASS (structural)** — automated inside the installer suite; verifies OpenCode V2's documented source paths, the `engineering-cad` ID, `name`/`description`/`slash` frontmatter, and the absence of a hiding `permissions` rule |
 | Packaged-tarball smoke test | What a user actually downloads from npm | **PASS** — 49 checks via `node scripts/smoke.js` after `npm pack`: installs the tarball offline into a throwaway prefix, runs the installed binary, and verifies target, ID, frontmatter, migration refresh, and refusal of an invalid old install |
+| Package contents audit | What `npm publish` would upload | **PASS** — `npm pack --dry-run`: 57 files, 79.1 kB; `test/` and `scripts/` excluded; packaged skill byte-identical to the repository source (38/38 SHA-256); `tests/secret_audit.py` **CLEAN** (118 files, 0 pattern hits, 0 banned names) |
 | OpenCode skill discovery (live) | The skill actually listed by a running OpenCode | **PASS (skill list)** — after a local install to `~/.config/opencode/skills/engineering-cad`, the running session refreshed its skill list and advertised `<id>engineering-cad</id>` (previously only `engineering_agent`, which is not a discoverable ID). The `/` **menu UI itself was not driven** — no `opencode` TUI is installed here — so "the entry renders as `/engineering-cad` in the menu" is **not claimed**. |
 
 What the installer suite covers: default global target and its documented
