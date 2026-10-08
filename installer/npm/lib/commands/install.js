@@ -10,6 +10,8 @@ const { writeManifest, diffAgainstManifest } = require("../manifest");
 const { validateSkillDir } = require("../validate");
 const { needConfirm } = require("../prompt");
 const { registerSkillPath } = require("../config");
+const { migrate } = require("../migrate");
+const { readInstalled } = require("../detect");
 
 async function run(opts = {}) {
   ui.header("Engineering CAD Agent Skill");
@@ -32,8 +34,9 @@ async function run(opts = {}) {
     ui.warn("OpenCode not detected — the skill will still be copied to the standard location");
   }
 
-  // 3. Target skill directory
+  // 3. Target skill directory + identity
   ui.ok(`Skill directory: ${ctx.targetDir} (${ctx.mode})`);
+  ui.ok(`Skill ID: ${ctx.skillId} (OpenCode slash command: /${ctx.skillId})`);
 
   // 4. --register is a configuration-only action: it applies whether or not
   //    the skill files are already in place, and it prompts before writing.
@@ -42,16 +45,30 @@ async function run(opts = {}) {
     if (rc !== EXIT_OK) return rc;
   }
 
-  // 5. Already installed -> report only, never touch files.
+  // 5. An installation left at an old location by a previous version is
+  //    migrated first; it never overwrites an existing installation at the
+  //    new location.
+  if (!ctx.installed.installed && ctx.legacyDirs.length) {
+    const m = await migrate(ctx);
+    if (m.status === "failed") return EXIT_ERROR;
+    if (m.status === "dry-run") {
+      ui.blank();
+      ui.out("Dry run — no changes made.");
+      return EXIT_OK;
+    }
+    if (m.status === "migrated") return finishMigration(ctx);
+  }
+
+  // 6. Already installed -> report only, never touch files.
   if (ctx.installed.installed) return reportAlreadyInstalled(ctx);
 
   const files = walkFiles(ctx.source.dir);
   const srcVersion = ctx.source.skillJson.version;
 
-  // 6. Plan
+  // 7. Plan
   ui.step(`Installing ${ctx.skillId} (${files.length} files, version ${srcVersion})`);
 
-  // 7. Another source root may already provide this skill id: confirm before
+  // 8. Another source root may already provide this skill id: confirm before
   //    creating a second copy of it.
   const duplicate = ctx.registration && ctx.registration.conflict && !ctx.registration.registered;
   if (duplicate) {
@@ -60,7 +77,7 @@ async function run(opts = {}) {
   }
   if (!ctx.register) reportConfigStatus(ctx);
 
-  // 8. Dry run stops here.
+  // 9. Dry run stops here.
   if (ctx.dryRun) {
     ui.blank();
     ui.info(`Would install ${files.length} files into ${ctx.targetDir}`);
@@ -68,7 +85,7 @@ async function run(opts = {}) {
     return EXIT_OK;
   }
 
-  // 9. Copy + manifest.
+  // 10. Copy + manifest.
   const copied = copyFiles(ctx.source.dir, ctx.targetDir, files);
   writeManifest(ctx.targetDir, {
     skillId: ctx.skillId,
@@ -79,7 +96,7 @@ async function run(opts = {}) {
   ui.ok(`Skill files written to ${ctx.targetDir} (${copied} files)`);
   ui.ok(`Version ${srcVersion}`);
 
-  // 9. Validate.
+  // 11. Validate.
   const v = validateSkillDir(ctx.targetDir);
   if (!v.ok) {
     ui.blank();
@@ -93,13 +110,35 @@ async function run(opts = {}) {
 
   ui.blank();
   ui.out("Installation complete.");
+  nextSteps(ctx);
+  return EXIT_OK;
+}
+
+/** Shared tail: how the user actually gets to the skill in OpenCode. */
+function nextSteps(ctx) {
   ui.blank();
   ui.out("Next steps:");
   ui.blank();
-  ui.out("1. Start AutoCAD");
-  ui.out("2. Start OpenCode");
-  ui.out("3. Ask:");
+  ui.out("1. Restart or reload OpenCode");
+  ui.out(`2. Type / to confirm /${ctx.skillId} is listed`);
+  ui.out("3. Start AutoCAD with a drawing open");
+  ui.out("4. Ask:");
   ui.out('   "Create a 6000 × 4000 mm room."');
+}
+
+/** Migration finished successfully: report, then point at `update`. */
+function finishMigration(ctx) {
+  const installed = readInstalled(ctx.targetDir);
+  const available = ctx.source.skillJson.version;
+
+  ui.blank();
+  ui.out("Installation complete (migrated from an old location).");
+  if (installed.version && installed.version !== available) {
+    ui.blank();
+    ui.out(`Migrated version: v${installed.version}  (available: v${available})`);
+    ui.out("Run `npx autocad-skill update` to upgrade to the available version.");
+  }
+  nextSteps(ctx);
   return EXIT_OK;
 }
 
@@ -152,15 +191,16 @@ function reportAlreadyInstalled(ctx) {
 
 /** Read-only configuration report for the default (auto-discovery) path. */
 function reportConfigStatus(ctx) {
+  const root = ctx.skillsRoot;
   if (!ctx.configPath) {
-    ui.info("Configuration: no opencode.json found — OpenCode will auto-discover .opencode/skills/");
+    ui.info(`Configuration: no opencode.json found — auto-discovery location ${root}`);
     return;
   }
   if (ctx.registration && ctx.registration.registered) {
     ui.ok("Configuration verified (skill already listed in the skills array)");
     return;
   }
-  ui.ok("Configuration verified (no changes required — auto-discovery location)");
+  ui.ok(`Configuration verified (no changes required — auto-discovery location ${root})`);
 }
 
 /** --register: confirm, then append our path to the skills array. */

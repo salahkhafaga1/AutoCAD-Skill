@@ -58,11 +58,28 @@ cd installer/npm
 npm test
 ```
 
-They use Node's built-in test runner with no dependencies: 34 tests covering
-install detection, dry-run, config preservation, local-modification
-detection, update confirmation, rollback, doctor output, and invalid
-environments. Every test runs against a throwaway directory in the OS temp
-folder — no test writes into the repository or into a real OpenCode project.
+They use Node's built-in test runner with no dependencies: 60 tests covering
+the default global install target and `--local`, migration from the old
+undiscovered location (copy first, validate, refresh what the user never
+touched, preserve what they did, then confirm before removing), the skill ID
+and frontmatter discovery requirements, install detection,
+dry-run, config preservation, local-modification detection, a user-added file
+surviving consecutive updates, update
+confirmation, rollback, doctor output — including the `skill` permission —
+and invalid environments.
+
+`scripts/smoke.js` is a separate check of the package a user would actually
+download: run `npm pack`, then `node scripts/smoke.js [path/to.tgz]`. It
+installs the tarball offline into a throwaway prefix under the OS temp folder
+and drives the installed binary against throwaway homes — 49 checks, including
+the migration path.
+
+Every test runs against a throwaway directory in the OS temp folder with its
+own `AUTOCAD_SKILL_HOME`, so no test can read or write the repository, your
+real OpenCode project, or this machine's `~/.config/opencode` and
+`~/.opencode`. `AUTOCAD_SKILL_SOURCE` defaults to the repo skill folder in
+tests so a stale `installer/npm/skill/` build artifact left by an earlier
+`npm pack` can never shadow the current sources.
 
 ## Changing the skill
 

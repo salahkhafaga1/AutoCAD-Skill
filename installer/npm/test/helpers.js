@@ -15,11 +15,26 @@ const BIN = path.resolve(__dirname, "..", "bin", "autocad-skill.js");
 const PKG = path.resolve(__dirname, "..");
 const REPO_SKILL = path.resolve(PKG, "..", "..", "skill", "engineering_agent");
 
-/** Clean environment: no inherited skill-source override, no debug flag. */
+/** Clean environment: no debug flag, no inherited XDG config, and defaults
+ *  that keep every test hermetic on any machine:
+ *
+ *    AUTOCAD_SKILL_HOME   a throwaway home, so no test can read or write the
+ *                         real machine's ~/.config/opencode or ~/.opencode
+ *    AUTOCAD_SKILL_SOURCE the repo source, so a test never picks up a stale
+ *                         `installer/npm/skill/` build artifact left behind by
+ *                         an earlier `npm pack`
+ *
+ * Pass an explicit value in `extra` to opt a test out of either default. */
 function baseEnv(extra = {}) {
   const env = { ...process.env };
-  delete env.AUTOCAD_SKILL_SOURCE;
   delete env.AUTOCAD_SKILL_DEBUG;
+  delete env.XDG_CONFIG_HOME;
+  if (!Object.prototype.hasOwnProperty.call(extra, "AUTOCAD_SKILL_HOME")) {
+    env.AUTOCAD_SKILL_HOME = tempDir("acs-home-");
+  }
+  if (!Object.prototype.hasOwnProperty.call(extra, "AUTOCAD_SKILL_SOURCE")) {
+    env.AUTOCAD_SKILL_SOURCE = REPO_SKILL;
+  }
   for (const [k, v] of Object.entries(extra)) {
     if (v === undefined) delete env[k];
     else env[k] = v;
@@ -70,10 +85,17 @@ function defaultConfig() {
   };
 }
 
-/** Create a temp OpenCode project with a config file (unless config === null). */
+/** Create a temp OpenCode project with a config file (unless config === null).
+ *
+ *  A configless project still gets a `.git` marker so that findProjectRoot()
+ *  stops here. Without it the walk continues above the temp directory and can
+ *  pick up an unrelated ancestor (a real `~/.opencode` on the machine running
+ *  the tests), which would both make the test non-deterministic and let it
+ *  touch real user files. */
 function makeProject(config) {
   const dir = tempDir();
   if (config !== null) writeJson(path.join(dir, "opencode.json"), config === undefined ? defaultConfig() : config);
+  else fs.mkdirSync(path.join(dir, ".git"), { recursive: true });
   return dir;
 }
 
@@ -100,6 +122,17 @@ function rmrf(p) {
   fs.rmSync(p, { recursive: true, force: true });
 }
 
+/** A throwaway home directory, used as AUTOCAD_SKILL_HOME so no test can
+ *  touch the real machine's ~/.config/opencode or ~/.opencode. */
+function fakeHome() {
+  return tempDir("acs-home-");
+}
+
+/** <home>/.config/opencode/skills/<id> — OpenCode's global skills source. */
+function globalTargetOf(home, id = "engineering-cad") {
+  return path.join(home, ".config", "opencode", "skills", id);
+}
+
 /**
  * Build a standalone skill source for update tests.
  * Returns the directory that AUTOCAD_SKILL_SOURCE should point at.
@@ -117,9 +150,48 @@ function makeSkillSource({ version, mutate } = {}) {
   return dir;
 }
 
+/**
+ * The install manifest a 0.2.0 install recorded for `dir`.
+ *
+ * Call it *after* writing what the old installer shipped and *before* adding
+ * anything of the user's own: only files that predate the manifest are the
+ * installer's, and only those may be refreshed or removed later.
+ */
+function writeLegacyManifest(dir, { skillId = "engineering_agent", skillVersion = "0.1.0", installerVersion = "0.2.0" } = {}) {
+  const files = treeHashes(dir);
+  delete files[".autocad-skill-manifest.json"];
+  writeJson(path.join(dir, ".autocad-skill-manifest.json"), {
+    schema: 1,
+    skillId,
+    skillVersion,
+    installerVersion,
+    installedAt: new Date().toISOString(),
+    files,
+  });
+  return dir;
+}
+
+/**
+ * Rewrite a skill directory to the identity releases up to 0.2.0 shipped:
+ * frontmatter `name: engineering-cad-agent` and `skill.json.id` =
+ * `engineering_agent`. Used to build a legacy install that the current
+ * source genuinely differs from.
+ */
+function downgradeToOldIdentity(dir) {
+  const md = path.join(dir, "SKILL.md");
+  const text = fs.readFileSync(md, "utf8").replace(/^name:\s*engineering-cad\s*$/m, "name: engineering-cad-agent");
+  fs.writeFileSync(md, text, "utf8");
+  const sj = readJson(path.join(dir, "skill.json"));
+  sj.id = "engineering_agent";
+  sj.name = "engineering-cad-agent";
+  writeJson(path.join(dir, "skill.json"), sj);
+  return dir;
+}
+
 module.exports = {
   BIN, PKG, REPO_SKILL,
-  runCli, tempDir, makeProject, makeSkillSource,
+  runCli, tempDir, makeProject, makeSkillSource, fakeHome, globalTargetOf,
   writeJson, readJson, defaultConfig,
   treeHashes, shaFile, rmrf, baseEnv,
+  writeLegacyManifest, downgradeToOldIdentity,
 };

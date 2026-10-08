@@ -36,7 +36,7 @@ test("version reports an installed copy only when it differs", async (t) => {
   assert.strictEqual(same.stdout.trim().split(/\r?\n/).length, 4);
 
   // Simulate an older installed copy.
-  const skillPath = path.join(project, ".opencode", "skills", "engineering_agent", "skill.json");
+  const skillPath = path.join(project, ".opencode", "skills", "engineering-cad", "skill.json");
   const sj = readJson(skillPath);
   sj.version = "0.0.9";
   require("fs").writeFileSync(skillPath, JSON.stringify(sj, null, 2));
@@ -44,6 +44,7 @@ test("version reports an installed copy only when it differs", async (t) => {
   const diff = runCli(["version", "--project", project]);
   assert.strictEqual(diff.status, 0, diff.output);
   assert.match(diff.stdout, /Installed skill version: 0\.0\.9/);
+  assert.match(diff.stdout, /Skill version: 0\.1\.0/);
 });
 
 test("--help exits 0 and lists every command", () => {

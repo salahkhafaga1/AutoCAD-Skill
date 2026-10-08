@@ -98,7 +98,10 @@ MODIFY, and RECOVER without restarting a project.
 ```
 GitHub (versioned source)
   → npm / npx installer (distribution & update layer — IMPLEMENTED)
-    → OpenCode (runtime, discovers skill via `skills` config)
+    → OpenCode (runtime, discovers the skill id `engineering-cad` from its
+                 documented skills sources: ~/.config/opencode/skills,
+                 ~/.claude/skills, ~/.agents/skills, or the project's
+                 .opencode/skills)
       → autocad-mcp (external dependency)
         → AutoCAD
 ```

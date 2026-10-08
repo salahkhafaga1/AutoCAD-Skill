@@ -44,7 +44,7 @@ function readConfig(configPath) {
  * Report (read-only) the current registration state for our skill id.
  * Returns { skillsArrayPresent, paths, registered, conflict }.
  */
-function inspectRegistration(configPath, targetDir) {
+function inspectRegistration(configPath, targetDir, { skillId = "engineering-cad" } = {}) {
   const { exists, data } = readConfig(configPath);
   if (!exists) {
     return { exists: false, skillsArrayPresent: false, paths: [], registered: false, conflict: null };
@@ -62,7 +62,7 @@ function inspectRegistration(configPath, targetDir) {
     const abs = path.isAbsolute(p) ? normalize(p) : normalize(path.join(cfgDir, p));
     if (abs === normTarget || abs === normSkillsRoot) { registered = true; continue; }
     // Another registered root that would also yield this skill id => duplicate.
-    if (discoversSkillId(abs, "engineering_agent")) conflict = conflict || p;
+    if (discoversSkillId(abs, skillId)) conflict = conflict || p;
   }
   return {
     exists: true,
@@ -154,11 +154,60 @@ function inspectMcp(configPath) {
   }
 }
 
+/* Whole-value wildcard match, the same `*` / `?` semantics OpenCode uses. */
+function globMatch(pattern, value) {
+  const rx = String(pattern)
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*/g, "[\\s\\S]*")
+    .replace(/\?/g, "[\\s\\S]");
+  return new RegExp(`^${rx}$`).test(String(value));
+}
+
+/**
+ * Read-only check of the `skill` permission rules for our skill id.
+ *
+ * OpenCode's base policy is `{ action: "*", resource: "*", effect: "allow" }`,
+ * so a skill is advertised and loadable with no configuration at all. We only
+ * need to flag a rule that would hide or gate it.
+ *
+ * Returns { present, effect, resource, source } where `effect` is the winning
+ * rule's effect, or "allow" when no `skill` rule matches.
+ */
+function inspectSkillPermission(configPaths, skillId) {
+  const found = { present: false, effect: "allow", resource: null, source: null };
+  for (const cfg of configPaths) {
+    if (!cfg) continue;
+    let data;
+    try {
+      const r = readConfig(cfg);
+      if (!r.exists) continue;
+      data = r.data;
+    } catch (e) {
+      return { ...found, parseError: e.message, source: cfg };
+    }
+    const rules = Array.isArray(data.permissions) ? data.permissions : [];
+    // Rules are evaluated in order, last match wins — so walk forward.
+    for (const rule of rules) {
+      if (!rule || typeof rule !== "object") continue;
+      if (rule.action !== "skill" && rule.action !== "*") continue;
+      const resource = typeof rule.resource === "string" ? rule.resource : "*";
+      if (!globMatch(resource, skillId)) continue;
+      found.present = true;
+      found.effect = rule.effect === "deny" || rule.effect === "ask" ? rule.effect : "allow";
+      found.resource = resource;
+      found.source = cfg;
+    }
+  }
+  return found;
+}
+
 module.exports = {
   readConfig,
   inspectRegistration,
   registerSkillPath,
   hasSkillsArray,
   inspectMcp,
+  inspectSkillPermission,
+  globMatch,
   normalize,
 };

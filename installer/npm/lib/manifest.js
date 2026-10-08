@@ -10,7 +10,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { hashTree, walkFiles } = require("./fsx");
+const { hashTree, walkFiles, sha256File } = require("./fsx");
 
 const MANIFEST_NAME = ".autocad-skill-manifest.json";
 
@@ -29,20 +29,53 @@ function readManifest(targetDir) {
   }
 }
 
-function writeManifest(targetDir, { skillId, skillVersion, installerVersion, sourceDir, previousVersion }) {
-  const files = hashTree(sourceDir, { excludeNames: [MANIFEST_NAME] });
+/**
+ * Write the install manifest.
+ *
+ * `files` is normally derived from `sourceDir` (the directory just written).
+ * Migration passes its own map instead: it must record, for every file, the
+ * hash the *installer* last wrote — which for a carried-over user edit is the
+ * old hash, not the user's. That is what keeps a later `update` from
+ * mistaking someone's edit for installer output.
+ */
+function writeManifest(targetDir, { skillId, skillVersion, installerVersion, sourceDir, previousVersion, files }) {
+  const tree = files || hashTree(sourceDir, { excludeNames: [MANIFEST_NAME] });
   const manifest = {
     schema: 1,
     skillId,
     skillVersion,
     installerVersion,
     installedAt: new Date().toISOString(),
-    files,
+    files: tree,
   };
   // Only set on an update, so a fresh install manifest stays minimal.
   if (previousVersion) manifest.previousVersion = previousVersion;
   fs.writeFileSync(manifestPath(targetDir), JSON.stringify(manifest, null, 2) + "\n", "utf8");
   return manifest;
+}
+
+/**
+ * Build the manifest `files` map after installing `sourceDir` into
+ * `targetDir`, preserving who owns what:
+ *
+ *   - shipped file             -> the hash of the copy just written (ours)
+ *   - target-only, previously recorded -> that recorded hash, so an edit keeps
+ *                                   reading as an edit after an update
+ *   - target-only, unrecorded  -> omitted, so it keeps reading as a file the
+ *                                 user added and `update` never deletes it
+ *
+ * Hashing the whole directory instead would launder user-added files into
+ * "installer output", and the next update would then remove them.
+ */
+function provenanceFiles(targetDir, sourceDir, previousFiles) {
+  const prev = previousFiles || {};
+  const inSource = new Set(walkFiles(sourceDir, { excludeNames: [MANIFEST_NAME] }));
+  const files = {};
+  for (const rel of walkFiles(targetDir, { excludeNames: [MANIFEST_NAME] })) {
+    if (inSource.has(rel)) files[rel] = sha256File(path.join(targetDir, rel));
+    else if (rel in prev) files[rel] = prev[rel];
+  }
+  return files;
 }
 
 /**
@@ -92,6 +125,7 @@ module.exports = {
   manifestPath,
   readManifest,
   writeManifest,
+  provenanceFiles,
   diffAgainstManifest,
   compareTrees,
 };

@@ -7,7 +7,7 @@ const path = require("path");
 const { runCli, makeProject, treeHashes, readJson, writeJson, REPO_SKILL, rmrf } = require("./helpers");
 
 function targetOf(project) {
-  return path.join(project, ".opencode", "skills", "engineering_agent");
+  return path.join(project, ".opencode", "skills", "engineering-cad");
 }
 
 test("fresh install copies the skill, writes a manifest, and reports success", (t) => {
@@ -23,7 +23,7 @@ test("fresh install copies the skill, writes a manifest, and reports success", (
   assert.ok(fs.existsSync(path.join(target, "rules")), "rules/ installed");
 
   const manifest = readJson(path.join(target, ".autocad-skill-manifest.json"));
-  assert.strictEqual(manifest.skillId, "engineering_agent");
+  assert.strictEqual(manifest.skillId, "engineering-cad");
   assert.ok(Object.keys(manifest.files).length >= 30, "manifest records the installed files");
 
   assert.match(r.stdout, /Installation complete\./);
@@ -93,7 +93,7 @@ test("installing when a skills entry already provides this skill asks first", (t
   t.after(() => rmrf(project));
 
   // A *different* source root that already provides the same skill id.
-  const vendorSkill = path.join(project, "vendor_skills", "engineering_agent");
+  const vendorSkill = path.join(project, "vendor_skills", "engineering-cad");
   fs.mkdirSync(vendorSkill, { recursive: true });
   fs.copyFileSync(path.join(REPO_SKILL, "SKILL.md"), path.join(vendorSkill, "SKILL.md"));
   fs.copyFileSync(path.join(REPO_SKILL, "skill.json"), path.join(vendorSkill, "skill.json"));

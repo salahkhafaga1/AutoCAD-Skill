@@ -80,8 +80,14 @@ Manual changes follow the same rules by discipline; the `autocad-skill`
 installer enforces them in code:
 
 - The default install writes **no configuration at all** — the skill goes to
-  the auto-discovered `.opencode/skills/` location, and an existing
+  the auto-discovered global skills folder
+  (`~/.config/opencode/skills/engineering-cad/`, or
+  `<project>/.opencode/skills/engineering-cad/` with `--local`), and an existing
   `opencode.json` stays byte-for-byte identical.
+- No `permissions` entry is ever added or modified. OpenCode's default policy
+  allows skills, so none is needed; `autocad-skill doctor` reports a `skill`
+  rule that would `deny` the skill as an error, and one that would `ask` as a
+  warning.
 - `install --register` is the explicit opt-in: it confirms first, backs the
   config up to `opencode.json.autocad-skill-backup`, and appends exactly one
   path while preserving every other key.
@@ -89,14 +95,24 @@ installer enforces them in code:
   parsed, is refused rather than rewritten.
 - A `skills` entry that already provides this skill id is reported, and a
   second copy is only created after explicit confirmation.
+- Migrating an installation out of an old location removes **only** that
+  skill's own directory, and only after a confirmation that defaults to
+  **[y/N] = N**. Sibling skills and parent directories are never touched.
 - The `mcp.servers.autocad-mcp` block is never modified; the installer reads
   it and reports what it finds, nothing more.
 
 ## Troubleshooting
 
-- Skill not listed: check the `skills` path (working-directory-relative),
-  that the folder contains `engineering_agent/SKILL.md`, and that the file
-  name is exactly `SKILL.md` with `name` and `description` in frontmatter.
+- Skill not listed: run `npx autocad-skill doctor` — it reports the skill ID,
+  the expected install path, whether that path is one of OpenCode's documented
+  discovery sources, any leftover copy at an old location, and any `skill`
+  permission rule that would hide it. Expected: `engineering-cad`, offered as
+  `/engineering-cad`.
+- Wiring it by hand: check the `skills` path (working-directory-relative),
+  that the folder contains `<skill-dir>/SKILL.md`, and that the file name is
+  exactly `SKILL.md` with `name` and `description` in frontmatter. Remember
+  the directory name sets the ID — copy it to `.opencode/skills/engineering-cad/`
+  to get `/engineering-cad`.
 - MCP server not connected: verify the venv entry point exists and
   `ACAD_MCP_OUTPUT_ROOT` is writable; check OpenCode's MCP server log.
 - Validator disagreements: run `python tests/validate_skill.py` — it

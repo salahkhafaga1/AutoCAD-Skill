@@ -35,8 +35,9 @@ npx autocad-skill help
 
 | Option | Effect |
 |---|---|
-| `--project <dir>` | Operate on this project (default: walk up from the cwd, the way OpenCode does) |
-| `--global` | Operate on `~/.config/opencode/skills/` instead of the project |
+| `--local` | Install into `<project>/.opencode/skills/` instead of the global folder |
+| `--project <dir>` | Project to operate on; implies `--local` |
+| `--global` | OpenCode's global skills folder — this is the default |
 | `--yes`, `-y` | Skip confirmation prompts (scripts, CI, non-interactive runs) |
 | `--dry-run` | Print the plan and exit without changing anything |
 | `--register` | `install` only: also append the skill path to the `skills` array in `opencode.json` |
@@ -53,32 +54,99 @@ npx autocad-skill help
 Exit code `2` is deliberate: a non-interactive run never hangs waiting for a
 prompt, and it never silently proceeds on a destructive action either.
 
+## Where it installs — and why
+
+OpenCode V2 discovers skills from exactly these locations
+(<https://opencode.ai/v2/docs/skills/>):
+
+| Scope | Sources |
+|---|---|
+| Global | `~/.config/opencode/skills`, `~/.claude/skills`, `~/.agents/skills` |
+| Project | `.opencode/skills`, `.claude/skills`, `.agents/skills` (cwd → project root) |
+
+Two rules follow from that table, and both are load-bearing:
+
+1. **The default target is the global source.** `npx autocad-skill` has to work
+   from any directory — including one that is not an OpenCode project, and
+   including the home directory, which sits *above* the project root and is
+   therefore never searched for project sources.
+2. **The skill id is the directory name.** The folder is installed as
+   `engineering-cad`, so the id — and the TUI slash command — is
+   `/engineering-cad`. `SKILL.md`'s frontmatter `name: engineering-cad` carries
+   the same value so the display label and the id agree, and `slash: true` keeps
+   the skill exposed as a slash command.
+
+> A previous release installed to `<home>/.opencode/skills/engineering_agent/`.
+> That path is not a discovery source in either scope, so OpenCode never saw the
+> skill. `install` now migrates it (see below).
+
 ## install
 
 1. Detects the OS, the OpenCode project root, and the skill directory.
 2. Resolves the skill source: `AUTOCAD_SKILL_SOURCE` → the packaged copy → the
    repository checkout.
-3. Installs to `<project>/.opencode/skills/engineering_agent/`, the location
-   OpenCode discovers automatically. `--global` uses
-   `~/.config/opencode/skills/engineering_agent/`.
-4. Writes `.autocad-skill-manifest.json` — the SHA-256 of every file as the
+3. Installs to `~/.config/opencode/skills/engineering-cad/` by default — the
+   documented global source OpenCode discovers automatically. `--local` /
+   `--project <dir>` install to `<project>/.opencode/skills/engineering-cad/`.
+4. **Migrates** an installation left at an old location (see below).
+5. Writes `.autocad-skill-manifest.json` — the SHA-256 of every file as the
    installer wrote it. This is what later distinguishes *your* edits from the
    shipped content.
-5. Validates the result: required files, `SKILL.md` frontmatter, `skill.json`
+6. Validates the result: required files, `SKILL.md` frontmatter, `skill.json`
    identity, every manifest hash.
 
 **Configuration safety.** The default install writes no configuration at all —
-auto-discovery already covers `.opencode/skills/`. An existing `opencode.json`
-is left byte-for-byte identical. If another `skills` entry already provides
-this skill id, the installer warns and asks before creating a second copy.
-`--register` is the explicit opt-in path: it confirms first, backs up the
-config to `opencode.json.autocad-skill-backup`, and appends exactly one path
-while preserving every other key. A `skills` value that is not an array, or a
-config that cannot be parsed, is refused rather than rewritten.
+auto-discovery already covers both the global skills folder and
+`.opencode/skills/`. An existing `opencode.json` is left byte-for-byte
+identical. If another `skills` entry already provides this skill id, the
+installer warns and asks before creating a second copy. `--register` is the
+explicit opt-in path: it confirms first, backs up the config to
+`opencode.json.autocad-skill-backup`, and appends exactly one path while
+preserving every other key. A `skills` value that is not an array, or a config
+that cannot be parsed, is refused rather than rewritten.
 
 **Re-running** install is a no-op: it reports the installed version, verifies
 the hashes, and changes nothing. Locally modified files are listed and left
 alone.
+
+### Migration from an older install
+
+If a previous version put the skill somewhere OpenCode does not read, `install`
+finds it and moves it:
+
+| | |
+|---|---|
+| From (global scope) | `<home>/.opencode/skills/engineering_agent/`, `~/.config/opencode/skills/engineering_agent/` |
+| From (local scope) | `<project>/.opencode/skills/engineering_agent/` |
+| To | `<global or project skills root>/engineering-cad/` |
+
+- The **copy comes first** and is validated before anything else happens. If
+  validation fails, the copy is removed and the old installation is untouched.
+- **Untouched files are brought up to date.** Files the old installer wrote
+  and you never edited are replaced with the current package content — so a
+  migrated copy carries the same identity as a fresh install
+  (`name: engineering-cad`, `skill.json` id `engineering-cad`) instead of
+  freezing the old one. What it refreshed is printed.
+- **Everything you wrote travels untouched**: your edits, files you added,
+  and files you deleted. Their provenance travels too — the new manifest
+  keeps the hash the *installer* last wrote, so a later `update` still sees
+  them as yours and still asks before replacing them. Anything kept back is
+  listed, with a pointer to `npx autocad-skill update`.
+- A copy with **no install manifest** cannot be told apart from your own
+  edits, so nothing is refreshed and nothing is overwritten; you are told to
+  review it with `update`.
+- The old directory is deleted **only** after an explicit confirmation
+  (default **[y/N]** = N) or `--yes`. Without a terminal the question is simply
+  skipped: the install still succeeds and the path is printed so you can remove
+  it by hand.
+- Only the legacy skill directory itself is ever removed. Sibling skills,
+  parent directories, and anything else in `~/.opencode` are left alone.
+- `doctor` reports a leftover as a warning (never an error), and `install`
+  offers the migration again on the next run.
+
+`AUTOCAD_SKILL_HOME` overrides the home directory used for every global path
+(the test suite uses it so no test can touch a real machine); `XDG_CONFIG_HOME`
+overrides `~/.config`, the same override OpenCode documents.
 
 ## update
 
@@ -132,18 +200,27 @@ reported. Confirmed before applying unless `--yes`.
 
 ## doctor
 
-Read-only. Checks Node.js, npm, OpenCode, the installed skill, skill
-integrity, local modifications, update availability, the OpenCode
-configuration, the autocad-mcp entry, Python, and AutoCAD.
+Read-only. Checks Node.js, npm, OpenCode, the installed skill, the skill id
+and its slash command, whether the install target is a documented OpenCode
+discovery source, leftover installations at old locations, the `skill`
+permission, skill integrity, local modifications, update availability, the
+OpenCode configuration, the autocad-mcp entry, Python, and AutoCAD.
 
 ```
-Summary: 9 passed, 1 warning(s), 0 error(s), 1 not detected
+✓ Skill ID engineering-cad (OpenCode slash command /engineering-cad)
+✓ Skill discovery C:\Users\me\.config\opencode\skills\engineering-cad is a documented OpenCode source
+✓ Legacy install none
+✓ skill permission allowed by OpenCode's default policy
+
+Summary: 13 passed, 1 warning(s), 0 error(s), 1 not detected
 Result: no errors.
 ```
 
-Exits `1` only when at least one check reports **ERROR**. Warnings and "not
-detected" never fail the run — AutoCAD being absent is a warning, not an
-error, because it is not required for install or validation.
+Exits `1` only when at least one check reports **ERROR** — which now includes a
+`permissions` rule that would `deny` the skill (it would be invisible in the
+`/` menu) and an install target outside every documented source. Warnings and
+"not detected" never fail the run: a leftover old copy and an absent AutoCAD
+are warnings, because neither blocks the skill from working.
 
 `doctor` writes nothing: it does not create, modify, or delete any file.
 
@@ -172,13 +249,21 @@ copy differs from the available one.
 ## Development
 
 - Zero dependencies, no build step. Entry point: `bin/autocad-skill.js`.
-- Layout: `bin/` (argument parsing and dispatch), `lib/` (helpers and the four
-  commands), `scripts/prepack.js` (packaging), `test/` (node:test suite).
-- Tests: `npm test` — 34 tests covering install detection, dry-run, config
-  preservation, local-modification detection, update confirmation, rollback,
-  doctor output, and invalid environments. Every test runs against a throwaway
-  directory in the OS temp folder; no test writes into the repository or into
-  your real OpenCode project.
+- Layout: `bin/` (argument parsing and dispatch), `lib/` (helpers, migration,
+  and the four commands), `scripts/prepack.js` (packaging), `test/`
+  (node:test suite).
+- Tests: `npm test` — 60 tests covering install detection, the default global
+  target, `--local`, migration and its safety rules (refresh, preservation of
+  user edits/added files, refusal of an invalid old copy), skill id/discovery
+  frontmatter requirements, dry-run, config preservation, local-modification
+  detection, update confirmation, rollback, doctor output (including the
+  `skill` permission), and invalid environments.
+- Package smoke test: `npm pack` then `node scripts/smoke.js` — installs the
+  tarball offline into a throwaway prefix and runs the installed binary
+  against throwaway homes (49 checks).
+- Every test runs against a throwaway directory in the OS temp folder and gets
+  its own `AUTOCAD_SKILL_HOME`, so a test can never read or write your real
+  `~/.config/opencode` or `~/.opencode`, and never writes into the repository.
 - `npm pack` runs `scripts/prepack.js`, which copies
   `skill/engineering_agent/`, `LICENSE`, and `CHANGELOG.md` into the package
   root (npm cannot include files from outside the package). Those copies are

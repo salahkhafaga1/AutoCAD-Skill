@@ -15,7 +15,7 @@ const fs = require("fs");
 const ui = require("../ui");
 const { resolveSkillSource, readPackageMeta } = require("../source");
 const { findProjectRoot, resolveSkillsTarget, readInstalled, SKILL_ID } = require("../detect");
-const { EXIT_OK, EXIT_ERROR } = require("../context");
+const { EXIT_OK, EXIT_ERROR, scopeIsGlobal } = require("../context");
 
 /** Locate the installed skill, honoring --project / --global / cwd. */
 function installedSkillJson(opts) {
@@ -27,7 +27,10 @@ function installedSkillJson(opts) {
       if (!fs.statSync(startDir).isDirectory()) return null;
     }
     const proj = findProjectRoot(startDir);
-    const { targetDir } = resolveSkillsTarget(proj.root, { global: opts.global, skillId: SKILL_ID });
+    const { targetDir } = resolveSkillsTarget(proj.root, {
+      global: scopeIsGlobal(opts),
+      skillId: SKILL_ID,
+    });
     const inst = readInstalled(targetDir);
     return inst.installed && inst.skillJson ? inst : null;
   } catch {

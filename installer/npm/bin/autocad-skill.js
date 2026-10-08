@@ -7,8 +7,10 @@
  * Commands: install (default) | update | doctor | version | help
  *
  * Global flags:
- *   --project <dir>   project to operate on (default: walk up from cwd)
- *   --global          use ~/.config/opencode/skills instead of the project
+ *   --project <dir>   project to operate on (implies --local)
+ *   --local           install into <project>/.opencode/skills instead of the
+ *                     OpenCode global skills source
+ *   --global          the global skills source (default)
  *   --yes, -y         skip confirmation prompts (scripts / CI)
  *   --dry-run         show what would change, then exit without changing it
  *   --register        install only: also append the skill path to the
@@ -34,7 +36,7 @@ function usage() {
     "Usage: npx autocad-skill [command] [options]",
     "",
     "Commands:",
-    "  install     Copy the skill into the OpenCode project (default)",
+    "  install     Copy the skill into OpenCode's skills folder (default)",
     "  update      Compare, show changes, back up, then apply after confirmation",
     "  update --rollback  Restore the most recent backup",
     "  doctor      Read-only environment and installation checks",
@@ -42,12 +44,15 @@ function usage() {
     "  help        Show this message",
     "",
     "Options:",
-    "  --project <dir>  Project to operate on (default: walk up from the cwd)",
-    "  --global         Operate on ~/.config/opencode/skills instead",
+    "  --global         OpenCode's global skills folder (default)",
+    "  --local          Install into the project's .opencode/skills instead",
+    "  --project <dir>  Project to operate on (implies --local)",
     "  --yes, -y        Skip confirmation prompts (scripts / CI)",
     "  --dry-run        Show what would change; change nothing",
     "  --register       Also add the skill path to the opencode.json skills array",
     "  --rollback       (update) Restore the most recent backup",
+    "",
+    "The skill is installed as engineering-cad, so OpenCode offers /engineering-cad.",
     "",
     "Exit codes: 0 success · 1 error · 2 aborted (declined or needs a terminal)",
     "Docs: installer/npm/README.md and docs/installation.md",
@@ -64,6 +69,7 @@ function parseArgs(argv) {
     else if (a === "--register") opts.register = true;
     else if (a === "--rollback") opts.rollback = true;
     else if (a === "--global") opts.global = true;
+    else if (a === "--local") opts.local = true;
     else if (a === "--project") {
       const v = argv[++i];
       if (v === undefined) throw Object.assign(new Error("--project requires a directory"), { code: "EBADFLAG" });

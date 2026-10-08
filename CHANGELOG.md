@@ -17,6 +17,82 @@ No change is recorded here until it actually exists in the repository.
 
 ---
 
+## [Unreleased]
+
+**Not released.** The npm package version is still 0.2.0, which is already
+published — a new package version (0.2.1) must be cut before the changes below
+can be published. See `docs/development.md` for the release steps.
+
+### Fixed
+
+- **The installed skill was invisible to OpenCode.** `npx autocad-skill`
+  defaulted to a project-scoped install and fell back to the current
+  directory, so running it from the home directory wrote to
+  `<home>/.opencode/skills/engineering_agent/`. That path is not an OpenCode V2
+  discovery source in either scope, so the skill was never advertised and never
+  appeared in the `/` menu. The default target is now
+  `~/.config/opencode/skills/engineering-cad/`, a documented global source;
+  `--local` / `--project <dir>` still install into
+  `<project>/.opencode/skills/engineering-cad/`.
+- **Skill ID.** OpenCode derives the skill ID from the directory name and uses
+  the frontmatter `name` as its display label, so the effective identity was
+  `engineering_agent` / `engineering-cad-agent` rather than the intended
+  `engineering-cad`. The install directory, the frontmatter `name`, and
+  `skill.json`'s `id` are now all `engineering-cad`, making the slash command
+  `/engineering-cad`.
+- `version` resolved its target as project-scoped regardless of flags, so it
+  could not see a globally installed copy.
+- **`update` could delete a file the user added.** After applying an update it
+  re-hashed the whole target directory into the manifest, which recorded the
+  user's own files as installer output — so the *next* update classified them
+  as stale and removed them. The manifest is now written from provenance
+  (shipped file → the hash just written; anything else → the hash the installer
+  last recorded, or nothing at all), so user-added files stay untracked and
+  survive every update, and user-edited files keep reading as edits.
+
+### Added
+
+- Migration of installations at old, undiscovered locations: the copy is made
+  and validated first, and the old directory is removed only after an explicit
+  confirmation defaulting to **[y/N] = N** (or `--yes`). Without a terminal the
+  removal is skipped rather than aborting the install. Only the legacy skill's
+  own directory is ever deleted — sibling skills and parent directories are
+  untouched. Files the old installer wrote and the user never edited are
+  brought up to date from the current package (so a migrated copy carries the
+  fixed identity, not the old one), while user edits, user-added files, and
+  user deletions travel untouched *with their provenance*, so a later `update`
+  still treats them as the user's and still asks first. A copy with no install
+  manifest is carried over completely unchanged, with a pointer to `update`.
+- `--local` flag; `--project <dir>` now implies project scope.
+- `doctor` checks for the skill ID and its slash command, whether the install
+  target is a documented discovery source, leftover installations at old
+  locations (warning), and any `permission` rule whose `skill` action would
+  `deny` (error) or `ask` (warn) the skill.
+- `AUTOCAD_SKILL_HOME` overrides the home directory used for global paths, so
+  the test suite cannot touch a real machine's `~/.config/opencode` or
+  `~/.opencode`.
+
+### Changed
+
+- `skill/engineering_agent/SKILL.md` frontmatter only: `name` is now
+  `engineering-cad` (was `engineering-cad-agent`) and `slash: true` was added.
+  The body, the rules, the workflows, the schemas, the templates, and every
+  engineering, risk, and verification semantic are unchanged. Level 1
+  validation re-run: PASS, 0 violations.
+- `skill/engineering_agent/skill.json`: `id` is now `engineering-cad`,
+  `name` is now the display string `Engineering CAD Agent`. The skill version
+  stays 0.1.0 and the tool contract version stays 1.
+- Test suite: 34 → 60 tests; tests are now hermetic against both the real home
+  directory and stale packaged build artifacts, and cover migration refresh,
+  preservation of user edits/added files/deletions, refusal of an invalid old
+  copy, and a user-added file surviving consecutive updates.
+- Packaged-tarball smoke test added: `node scripts/smoke.js` (after
+  `npm pack`) installs the real tarball offline into a throwaway prefix and
+  exercises `help`, `version`, `install`, `doctor`, `update`, and migration
+  against throwaway homes — 49 checks, no writes outside the sandbox.
+
+---
+
 ## [0.2.0] - 2026-10-08
 
 npm installer release. **The skill itself is unchanged** — every file under

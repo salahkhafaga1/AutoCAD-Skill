@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 const fs = require("fs");
 const path = require("path");
-const { runCli, makeProject, tempDir, treeHashes, rmrf } = require("./helpers");
+const { runCli, makeProject, tempDir, treeHashes, rmrf, fakeHome, globalTargetOf } = require("./helpers");
 
 test("--project pointing at a missing directory is an error", () => {
   const missing = path.join(tempDir(), "does-not-exist");
@@ -30,13 +30,19 @@ test("--project without a value is an error", () => {
   assert.match(r.stderr, /--project requires a directory/);
 });
 
-test("no command defaults to install, resolved from the working directory", (t) => {
+test("no command defaults to install into OpenCode's global skills source", (t) => {
   const project = makeProject();
-  t.after(() => rmrf(project));
+  const home = fakeHome();
+  t.after(() => { rmrf(project); rmrf(home); });
 
-  const r = runCli([], { cwd: project });
+  const r = runCli([], { cwd: project, env: { AUTOCAD_SKILL_HOME: home } });
   assert.strictEqual(r.status, 0, r.output);
-  assert.ok(fs.existsSync(path.join(project, ".opencode", "skills", "engineering_agent", "SKILL.md")));
+  assert.ok(
+    fs.existsSync(path.join(globalTargetOf(home), "SKILL.md")),
+    "installed into <home>/.config/opencode/skills/engineering-cad"
+  );
+  assert.strictEqual(fs.existsSync(path.join(project, ".opencode")), false, "project left untouched");
+  assert.match(r.stdout, /Skill ID: engineering-cad \(OpenCode slash command: \/engineering-cad\)/);
 });
 
 test("a project with no opencode.json still installs, with a warning", (t) => {
@@ -46,7 +52,7 @@ test("a project with no opencode.json still installs, with a warning", (t) => {
   const r = runCli(["install", "--project", project]);
   assert.strictEqual(r.status, 0, r.output);
   assert.match(r.stdout, /OpenCode not detected|no opencode\.json/);
-  assert.ok(fs.existsSync(path.join(project, ".opencode", "skills", "engineering_agent", "SKILL.md")));
+  assert.ok(fs.existsSync(path.join(project, ".opencode", "skills", "engineering-cad", "SKILL.md")));
 });
 
 test("an invalid AUTOCAD_SKILL_SOURCE falls back instead of crashing", (t) => {
@@ -56,7 +62,7 @@ test("an invalid AUTOCAD_SKILL_SOURCE falls back instead of crashing", (t) => {
 
   const r = runCli(["install", "--project", project], { env: { AUTOCAD_SKILL_SOURCE: empty } });
   assert.strictEqual(r.status, 0, r.output);
-  assert.ok(fs.existsSync(path.join(project, ".opencode", "skills", "engineering_agent", "SKILL.md")));
+  assert.ok(fs.existsSync(path.join(project, ".opencode", "skills", "engineering-cad", "SKILL.md")));
 });
 
 test("all activity stays inside the requested project", (t) => {

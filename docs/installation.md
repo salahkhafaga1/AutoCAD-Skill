@@ -34,12 +34,16 @@ yet built (see `installer/npm/README.md`).
    ```
 
    The skill directory is `skill/engineering_agent/`; OpenCode derives the
-   skill ID (`engineering_agent`) from that directory name at any depth under
-   the source path.
+   skill ID from the **directory name** at any depth under the source path, so
+   this manual path yields the ID `engineering_agent`.
 
    Alternative (project `.opencode` folder): copy the
    `skill/engineering_agent/` folder to
-   `.opencode/skills/engineering_agent/` — discovered automatically.
+   `.opencode/skills/engineering-cad/` — discovered automatically, with the ID
+   `engineering-cad` and the slash command `/engineering-cad`. Use `npx
+   autocad-skill` instead if you want the same ID as the published package;
+   it installs into `~/.config/opencode/skills/engineering-cad/` and migrates
+   this manual copy if one exists at an older location.
 
 3. Register the MCP server in the same `opencode.json` — see
    `opencode.example.json` at the repository root and
@@ -67,17 +71,31 @@ npx autocad-skill version
 The package lives in `installer/npm/` and is published as `autocad-skill`.
 Its behavior is documented in `installer/npm/README.md`; the important points:
 
-- The default install copies the skill to `.opencode/skills/engineering_agent/`,
-  the location OpenCode discovers automatically, so it changes **no**
-  configuration. An existing `opencode.json` stays byte-for-byte identical;
-  `--register` is the explicit opt-in that confirms first, backs the config
-  up, and appends one path.
+- The default install copies the skill to
+  `~/.config/opencode/skills/engineering-cad/`, a documented global OpenCode
+  source, so it works from any directory and changes **no** configuration. An
+  existing `opencode.json` stays byte-for-byte identical; `--register` is the
+  explicit opt-in that confirms first, backs the config up, and appends one
+  path. Use `--local` (or `--project <dir>`) to install into
+  `<project>/.opencode/skills/engineering-cad/` instead.
+- The skill is registered under the ID **`engineering-cad`**, so OpenCode
+  exposes it as **`/engineering-cad`**.
+- An installation left at an old, undiscovered location
+  (`~/.opencode/skills/engineering_agent/`) is migrated automatically: the
+  copy is validated first, files the old installer wrote and you never edited
+  are brought up to date so the copy carries the current identity, your own
+  edits and added files are kept exactly as they were and stay flagged as
+  yours, and only then is the old directory offered for removal — a
+  confirmation that defaults to **[y/N] = N**. Nothing else in those folders
+  is ever touched.
 - `update` shows the current and available versions, every file that changes,
   and any locally modified files — then asks for confirmation with the
   default **[y/N] = N**. It copies the installed skill to a backup directory
   outside the skills root before writing; `update --rollback` restores it.
 - `doctor` is read-only and exits non-zero only when a check reports an
-  error.
+  error; it also reports the skill ID, whether the target is a documented
+  discovery source, leftover old installs, and any `skill` permission rule
+  that would hide the skill.
 - Every command accepts `--dry-run`.
 
 Exit codes: `0` success, `1` error, `2` aborted or confirmation required.
@@ -93,6 +111,8 @@ verify, and so on. Live validation status: see the test-level matrix in
 ## Uninstall — IMPLEMENTED (manual)
 
 Remove the skill entry from `skills` in `opencode.json` (or delete the
-copied `.opencode/skills/engineering_agent/` folder) and, if desired, the
-`mcp.servers.autocad-mcp` entry. Nothing else is modified — the skill
-contains no installer that touches system state.
+installed folder — `~/.config/opencode/skills/engineering-cad/` for the
+default install, `.opencode/skills/engineering-cad/` for `--local`) and, if
+desired, the `mcp.servers.autocad-mcp` entry. Nothing else is modified — the
+skill contains no installer that touches system state. `npx autocad-skill
+doctor` prints the exact path it expects.

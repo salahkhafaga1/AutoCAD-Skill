@@ -8,9 +8,10 @@ const path = require("path");
 const ui = require("../ui");
 const { buildContext, EXIT_OK, EXIT_ERROR, EXIT_ABORT } = require("../context");
 const { walkFiles, copyFiles, removeTree, sha256File, isDir, isFile } = require("../fsx");
-const { writeManifest, diffAgainstManifest, compareTrees, MANIFEST_NAME } = require("../manifest");
+const { writeManifest, diffAgainstManifest, compareTrees, provenanceFiles, MANIFEST_NAME } = require("../manifest");
 const { validateSkillDir } = require("../validate");
 const { needConfirm } = require("../prompt");
+const { reportLegacy } = require("../migrate");
 
 async function run(opts = {}) {
   if (opts.rollback) return rollback(opts);
@@ -24,7 +25,10 @@ async function run(opts = {}) {
   }
 
   if (!ctx.installed.installed) {
-    ui.fail("Skill is not installed in this project.");
+    const hadLegacy = reportLegacy(ctx);
+    ui.fail(hadLegacy
+      ? "Skill is not installed at the current location."
+      : "Skill is not installed.");
     ui.out("Run `npx autocad-skill install` first.");
     return EXIT_ERROR;
   }
@@ -125,12 +129,16 @@ async function run(opts = {}) {
   const files = walkFiles(ctx.source.dir);
   copyFiles(ctx.source.dir, ctx.targetDir, files);
 
+  // Record provenance, not a snapshot of the directory. Hashing everything
+  // here would make the files the user added look like installer output, and
+  // the *next* update would then remove them.
   writeManifest(ctx.targetDir, {
     skillId: ctx.skillId,
     skillVersion: targetVersion,
     installerVersion: ctx.pkg.version,
     sourceDir: ctx.source.dir,
     previousVersion: currentVersion,
+    files: provenanceFiles(ctx.targetDir, ctx.source.dir, mods.manifest ? mods.manifest.files : null),
   });
 
   ui.ok(`Updated ${files.length} files (removed ${removed}, kept ${userAdded.length} local file(s))`);

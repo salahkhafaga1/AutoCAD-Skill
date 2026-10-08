@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { runCli, makeProject, makeSkillSource, treeHashes, readJson, rmrf } = require("./helpers");
 
-const TARGET = (p) => path.join(p, ".opencode", "skills", "engineering_agent");
+const TARGET = (p) => path.join(p, ".opencode", "skills", "engineering-cad");
 const BACKUPS = (p) => path.join(p, ".autocad-skill-backups");
 
 function newerSource() {
@@ -114,6 +114,40 @@ test("update reports 'up to date' when installed files match the source", (t) =>
   const r = runCli(["update", "--project", project]);
   assert.strictEqual(r.status, 0, r.output);
   assert.match(r.stdout, /Up to date/);
+});
+
+test("a file the user added survives every update, not just the first", (t) => {
+  const project = makeProject();
+  t.after(() => rmrf(project));
+  const target = TARGET(project);
+
+  assert.strictEqual(runCli(["install", "--project", project]).status, 0);
+  fs.writeFileSync(path.join(target, "my-notes.md"), "mine\n");
+
+  const src2 = newerSource();
+  const src3 = makeSkillSource({
+    version: "0.3.0",
+    mutate: (dir) => fs.appendFileSync(path.join(dir, "rules", "planning_rules.md"), "\n<!-- 0.3.0 -->\n"),
+  });
+  t.after(() => { rmrf(path.dirname(src2)); rmrf(path.dirname(src3)); });
+
+  const first = runCli(["update", "--project", project, "--yes"], { env: { AUTOCAD_SKILL_SOURCE: src2 } });
+  assert.strictEqual(first.status, 0, first.output);
+  assert.ok(fs.existsSync(path.join(target, "my-notes.md")), "kept after the first update");
+  assert.match(first.stdout, /kept 1 local file\(s\)/);
+
+  // The second update is where recording the whole directory used to bite:
+  // the first update had written the user's file into the manifest, so the
+  // second one treated it as stale installer output and removed it.
+  const second = runCli(["update", "--project", project, "--yes"], { env: { AUTOCAD_SKILL_SOURCE: src3 } });
+  assert.strictEqual(second.status, 0, second.output);
+  assert.ok(fs.existsSync(path.join(target, "my-notes.md")), "kept after the second update");
+  assert.match(second.stdout, /kept 1 local file\(s\)/);
+
+  // It still reads as the user's, not as something the installer wrote.
+  const d = runCli(["doctor", "--project", project], { env: { AUTOCAD_SKILL_SOURCE: src3 } });
+  assert.strictEqual(d.status, 0, d.output);
+  assert.match(d.stdout, /Local modifications .*1 added/);
 });
 
 test("update on a project with no installation exits 1", (t) => {

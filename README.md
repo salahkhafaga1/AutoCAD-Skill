@@ -169,15 +169,25 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 - **Level 2 — offline MCP tests: PASS** — 105 tests against the external
   autocad-mcp checkout, no AutoCAD required.
 - **Level 3 — MCP wiring: PASS (post-restructure)** — the skill was
-  re-discovered and loaded live from `skill/engineering_agent/` (ID
-  `engineering_agent`), and the MCP server still exposes all 29 tools.
+  re-discovered and loaded live from `skill/engineering_agent/` (project
+  config path, ID `engineering_agent`), and the MCP server still exposes all
+  29 tools.
 - **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
   production-ready live AutoCAD testing. AutoCAD is not installed on the
   development machine; live end-to-end testing remains a separate step.
-- **Installer tests: PASS** — 34 automated tests of the npm CLI (install
-  detection, dry-run, config preservation, local-modification detection,
-  update confirmation, rollback, doctor, invalid environments). No test
-  writes into the repository or into a real OpenCode project.
+- **Installer tests: PASS** — 53 automated tests of the npm CLI (default
+  global target, `--local`, migration and its safety rules, skill ID and
+  frontmatter discovery requirements, dry-run, config preservation,
+  local-modification detection, update confirmation, rollback, doctor —
+  including the `skill` permission — and invalid environments). Every test
+  runs in a throwaway temp directory with its own `AUTOCAD_SKILL_HOME`; no
+  test writes into the repository or into a real OpenCode skills folder.
+- **OpenCode skill discovery: structural checks PASS, live TUI PENDING** —
+  the installer tests verify the install target is one of OpenCode V2's
+  documented discovery sources, that the skill ID is `engineering-cad`, and
+  that nothing in the frontmatter hides the skill. The `/engineering-cad`
+  entry has **not** been observed in a running TUI on this machine (no
+  OpenCode CLI available here) — see `docs/verification.md`.
 
 ---
 
@@ -198,17 +208,23 @@ git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
    npx autocad-skill install
    ```
 
-   which copies the skill to `.opencode/skills/engineering_agent/` (the
-   auto-discovered location) and writes no configuration at all, or register
-   it yourself by adding the skill folder to the `skills` array in your
-   project's `opencode.json`:
+   which copies the skill to `~/.config/opencode/skills/engineering-cad/`
+   (an auto-discovered global source, so it works from any directory) and
+   writes no configuration at all — then register the MCP server below. Use
+   `--local` for a project-local copy at
+   `<project>/.opencode/skills/engineering-cad/`. The skill is registered as
+   **`engineering-cad`**, so OpenCode offers **`/engineering-cad`**.
+
+   Prefer to wire it yourself? Add the skill folder to the `skills` array in
+   your project's `opencode.json`:
 
    ```json
    { "skills": ["AutoCAD-Skill/skill"] }
    ```
 
    Manual alternative: copy `AutoCAD-Skill/skill/engineering_agent/` to
-   `.opencode/skills/engineering_agent/` (auto-discovered).
+   `.opencode/skills/engineering-cad/` (auto-discovered; the directory name
+   sets the skill ID).
 2. **Register the MCP server** — see `opencode.example.json` for the
    project-local MCP configuration shape and [`docs/configuration.md`](docs/configuration.md)
    for field-by-field guidance. Replace the placeholders with your machine's

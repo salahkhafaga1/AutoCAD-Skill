@@ -13,10 +13,48 @@ const { spawnSync } = require("child_process");
 const { exists, isDir, isFile, readJson } = require("./fsx");
 const { MANIFEST_NAME } = require("./manifest");
 
-/* Directory name == skill.json "id" == OpenCode skill id. */
-const SKILL_ID = "engineering_agent";
+/* The OpenCode skill id == the installed directory name == SKILL.md
+ * frontmatter `name`. All three are kept equal so the id is the same under
+ * either resolution order OpenCode may use. */
+const SKILL_ID = "engineering-cad";
+
+/* Directory names used by pre-0.2.1 installs. Kept only so we can find and
+ * migrate them; never used as an install target. */
+const LEGACY_SKILL_IDS = ["engineering_agent"];
 
 /* ------------------------------------------------------------------ OS ---- */
+
+/**
+ * Home directory, overridable for tests/CI.
+ *
+ * AUTOCAD_SKILL_HOME replaces the home directory for every global path this
+ * package derives (skill source, backups, legacy locations). It exists so the
+ * test suite never touches a real machine home directory.
+ */
+function homeDir() {
+  const override = process.env.AUTOCAD_SKILL_HOME;
+  if (override && override.trim()) return path.resolve(override.trim());
+  return os.homedir();
+}
+
+/**
+ * OpenCode's global skills source root.
+ *
+ * Honors XDG_CONFIG_HOME (the documented override for ~/.config/opencode) and
+ * otherwise uses <home>/.config/opencode/skills.
+ */
+function globalSkillsRoot() {
+  const xdg = process.env.XDG_CONFIG_HOME;
+  const base = xdg && xdg.trim() ? path.resolve(xdg.trim()) : path.join(homeDir(), ".config");
+  return path.join(base, "opencode", "skills");
+}
+
+/** Global OpenCode configuration directory (same resolution as above). */
+function globalConfigDir() {
+  const xdg = process.env.XDG_CONFIG_HOME;
+  const base = xdg && xdg.trim() ? path.resolve(xdg.trim()) : path.join(homeDir(), ".config");
+  return path.join(base, "opencode");
+}
 
 function detectOS() {
   const names = { win32: "Windows", darwin: "macOS", linux: "Linux" };
@@ -86,30 +124,74 @@ function runVersion(cmd) {
 
 function detectOpenCode(root, configPath) {
   const binary = runVersion("opencode");
-  const globalConfig = isFile(path.join(os.homedir(), ".config", "opencode", "opencode.json")) ||
-                       isDir(path.join(os.homedir(), ".config", "opencode"));
+  const globalConfig = isFile(path.join(globalConfigDir(), "opencode.json")) ||
+                       isDir(globalConfigDir());
   const projectOpenDir = isDir(path.join(root, ".opencode"));
+  const skillRoot = globalSkillsRoot();
+  const globalSkills = isDir(skillRoot) || isDir(path.dirname(skillRoot));
   return {
     binary,
     config: configPath,
     globalConfig,
     projectOpenDir,
-    detected: Boolean(binary || configPath || globalConfig || projectOpenDir),
+    detected: Boolean(binary || configPath || globalConfig || projectOpenDir || globalSkills),
     signals: [
       binary && "binary",
       configPath && "project config",
       projectOpenDir && ".opencode/",
       globalConfig && "global config",
+      globalSkills && "global skills",
     ].filter(Boolean),
   };
 }
 
+/**
+ * Every skills source root OpenCode V2 documents for this machine, in
+ * precedence order (low to high). Used by doctor to prove the install target
+ * really is discovered.
+ */
+function documentedSkillRoots(projectRoot) {
+  return {
+    global: [
+      path.join(globalSkillsRoot()),
+      path.join(homeDir(), ".claude", "skills"),
+      path.join(homeDir(), ".agents", "skills"),
+    ],
+    project: [
+      path.join(projectRoot, ".opencode", "skills"),
+      path.join(projectRoot, ".claude", "skills"),
+      path.join(projectRoot, ".agents", "skills"),
+    ],
+  };
+}
+
+/** True when `dir` sits directly inside one of the documented source roots. */
+function isDocumentedTarget(dir, projectRoot) {
+  const roots = documentedSkillRoots(projectRoot);
+  const parent = path.dirname(path.resolve(dir));
+  return [...roots.global, ...roots.project].some(
+    (r) => path.resolve(r) === parent
+  );
+}
+
 /* ----------------------------------------------------- skills locations --- */
 
-/** Official OpenCode skill locations (project + global). */
-function resolveSkillsTarget(root, { global: globalTarget = false, skillId = SKILL_ID } = {}) {
+/** Official OpenCode skill locations (project + global).
+ *
+ * OpenCode V2 discovers exactly these sources:
+ *   Global   ~/.config/opencode/skills, ~/.claude/skills, ~/.agents/skills
+ *   Project  .opencode/skills, .claude/skills, .agents/skills
+ *
+ * `~/.opencode/skills` is NOT a source in either scope, which is why the
+ * default install target is the global source and not a home-relative
+ * `.opencode` directory.
+ *
+ * Default scope is GLOBAL: `npx autocad-skill` must work from any directory,
+ * including one that is not an OpenCode project. `--local` / `--project <dir>`
+ * select the project scope instead. */
+function resolveSkillsTarget(root, { global: globalTarget = true, skillId = SKILL_ID } = {}) {
   if (globalTarget) {
-    const skillsRoot = path.join(os.homedir(), ".config", "opencode", "skills");
+    const skillsRoot = globalSkillsRoot();
     return { skillsRoot, targetDir: path.join(skillsRoot, skillId), mode: "global" };
   }
   const skillsRoot = path.join(root, ".opencode", "skills");
@@ -119,8 +201,42 @@ function resolveSkillsTarget(root, { global: globalTarget = false, skillId = SKI
 /** Backups live OUTSIDE every skills source root, so a backed-up SKILL.md can
  * never be discovered as a duplicate skill. */
 function backupRootFor(projectRoot, { global: globalTarget = false } = {}) {
-  if (globalTarget) return path.join(os.homedir(), ".autocad-skill-backups");
+  if (globalTarget) return path.join(homeDir(), ".autocad-skill-backups");
   return path.join(projectRoot, ".autocad-skill-backups");
+}
+
+/**
+ * Locations that older installs may have used, for the active scope.
+ *
+ * Only directories that actually contain a SKILL.md are returned, and only the
+ * legacy skill directory itself is ever reported — never its parent, and never
+ * a sibling skill. Migration may delete the reported directory after
+ * confirmation; nothing else in those parents is touched.
+ *
+ * Global scope migrates home-level leftovers (the broken default produced
+ * `<home>/.opencode/skills/<id>`). Project scope migrates that project's own
+ * previous install.
+ */
+function legacyInstallDirs(projectRoot, { global: globalTarget = true } = {}) {
+  const roots = globalTarget
+    ? [
+        // Observed broken default: a home-relative .opencode OpenCode never reads.
+        path.join(homeDir(), ".opencode", "skills"),
+        // Correct root, previous directory name.
+        globalSkillsRoot(),
+      ]
+    : [path.join(projectRoot, ".opencode", "skills")];
+
+  const out = [];
+  for (const root of roots) {
+    for (const id of LEGACY_SKILL_IDS) {
+      const dir = path.join(root, id);
+      if (dir === root) continue;
+      if (isFile(path.join(dir, "SKILL.md"))) out.push(dir);
+    }
+  }
+  // De-duplicate while preserving order.
+  return [...new Set(out)];
 }
 
 /** Read the installed state of a skill directory. */
@@ -189,7 +305,10 @@ function readMcpConfig(configPath) {
 
 module.exports = {
   SKILL_ID,
+  LEGACY_SKILL_IDS,
   detectOS, findProjectRoot, findConfigFile, detectOpenCode,
-  resolveSkillsTarget, backupRootFor, readInstalled,
+  homeDir, globalSkillsRoot, globalConfigDir,
+  resolveSkillsTarget, backupRootFor, legacyInstallDirs,
+  documentedSkillRoots, isDocumentedTarget, readInstalled,
   detectNpm, detectPython, detectAutoCAD, readMcpConfig,
 };

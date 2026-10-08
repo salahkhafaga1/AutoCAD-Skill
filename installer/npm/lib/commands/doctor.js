@@ -4,8 +4,12 @@
  * Exits 1 only when at least one check reports ERROR. */
 
 const ui = require("../ui");
+const path = require("path");
 const { buildContext, EXIT_OK, EXIT_ERROR } = require("../context");
-const { detectNpm, detectPython, detectAutoCAD } = require("../detect");
+const {
+  detectNpm, detectPython, detectAutoCAD, isDocumentedTarget, globalConfigDir,
+} = require("../detect");
+const { inspectSkillPermission } = require("../config");
 const { validateSkillDir } = require("../validate");
 const { diffAgainstManifest } = require("../manifest");
 
@@ -54,6 +58,53 @@ function run(opts = {}) {
     );
   } else {
     add("Engineering CAD Skill", STATUS.MISSING, `not installed (expected at ${ctx.targetDir})`);
+  }
+
+  // --- Skill identity -----------------------------------------------------
+  add("Skill ID", STATUS.PASS, `${ctx.skillId} (OpenCode slash command /${ctx.skillId})`);
+
+  // --- Discovery ----------------------------------------------------------
+  if (isDocumentedTarget(ctx.targetDir, ctx.projectRoot)) {
+    add("Skill discovery", STATUS.PASS, `${ctx.targetDir} is a documented OpenCode source`);
+  } else {
+    add(
+      "Skill discovery",
+      STATUS.ERROR,
+      `${ctx.targetDir} is NOT a documented OpenCode skill source — the skill will not be advertised`
+    );
+  }
+
+  // --- Leftover old installation ------------------------------------------
+  if (ctx.legacyDirs.length) {
+    add(
+      "Legacy install",
+      STATUS.WARN,
+      ctx.installed.installed
+        ? `leftover at ${ctx.legacyDirs.join(", ")} — the copy here is already migrated; ` +
+          "delete it when you are ready"
+        : `found at ${ctx.legacyDirs.join(", ")} — run \`npx autocad-skill install\` to migrate`
+    );
+  } else {
+    add("Legacy install", STATUS.PASS, "none");
+  }
+
+  // --- skill permission ----------------------------------------------------
+  const perm = inspectSkillPermission(
+    [ctx.configPath, path.join(globalConfigDir(), "opencode.json")],
+    ctx.skillId
+  );
+  if (perm.parseError) {
+    add("skill permission", STATUS.WARN, `configuration unreadable: ${perm.parseError}`);
+  } else if (perm.effect === "deny") {
+    add("skill permission", STATUS.ERROR, `denied by rule "${perm.resource}" (${perm.source}) — the skill is hidden`);
+  } else if (perm.effect === "ask") {
+    add("skill permission", STATUS.WARN, `rule "${perm.resource}" asks before loading (${perm.source})`);
+  } else {
+    add(
+      "skill permission",
+      STATUS.PASS,
+      perm.present ? `allowed by rule "${perm.resource}"` : "allowed by OpenCode's default policy"
+    );
   }
 
   // --- Skill integrity ----------------------------------------------------

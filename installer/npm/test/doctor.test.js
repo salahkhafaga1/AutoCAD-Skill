@@ -61,7 +61,7 @@ test("doctor reports local modifications as a warning, not an error", (t) => {
   t.after(() => rmrf(project));
 
   assert.strictEqual(runCli(["install", "--project", project]).status, 0);
-  const skillMd = path.join(project, ".opencode", "skills", "engineering_agent", "SKILL.md");
+  const skillMd = path.join(project, ".opencode", "skills", "engineering-cad", "SKILL.md");
   fs.appendFileSync(skillMd, "\n<!-- edited -->\n");
 
   const r = runCli(["doctor", "--project", project]);

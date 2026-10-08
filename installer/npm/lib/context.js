@@ -14,7 +14,7 @@ const path = require("path");
 const { resolveSkillSource, readPackageMeta } = require("./source");
 const {
   detectOS, findProjectRoot, findConfigFile, detectOpenCode,
-  resolveSkillsTarget, backupRootFor, readInstalled, SKILL_ID,
+  resolveSkillsTarget, backupRootFor, readInstalled, legacyInstallDirs, SKILL_ID,
 } = require("./detect");
 const { inspectRegistration, inspectMcp } = require("./config");
 const { compareTrees, diffAgainstManifest } = require("./manifest");
@@ -25,9 +25,32 @@ const EXIT_ERROR = 1;
 const EXIT_ABORT = 2;
 
 /**
+ * Which skills source the CLI operates on.
+ *
+ *   --global             -> global (default)
+ *   --local              -> project
+ *   --project <dir>      -> project (naming a project implies operating on it)
+ *   (nothing)            -> global, so `npx autocad-skill` works from anywhere
+ *
+ * Shared by every command, including `version`, which resolves its target
+ * without going through buildContext.
+ */
+function scopeIsGlobal(opts = {}) {
+  if (opts.global === true) return true;
+  if (opts.local || opts.project) return false;
+  return true;
+}
+
+/**
  * Build the shared context.
- * opts: { cwd, project, global, skillId }
+ * opts: { cwd, project, global, local, skillId }
  * Throws on unrecoverable problems (no skill source, bad --project path).
+ *
+ * Scope resolution (default = global):
+ *   --global            -> ~/.config/opencode/skills/engineering-cad
+ *   --local             -> <project>/.opencode/skills/engineering-cad
+ *   --project <dir>     -> <dir>/.opencode/skills/engineering-cad
+ *   (nothing)           -> global, so `npx autocad-skill` works anywhere
  */
 function buildContext(opts = {}) {
   const cwd = path.resolve(opts.cwd || process.cwd());
@@ -46,8 +69,10 @@ function buildContext(opts = {}) {
   const project = findProjectRoot(startDir);
   const configPath = findConfigFile(project.root);
   const skillId = opts.skillId || SKILL_ID;
+
+  const globalTarget = scopeIsGlobal(opts);
   const { skillsRoot, targetDir, mode } = resolveSkillsTarget(project.root, {
-    global: opts.global,
+    global: globalTarget,
     skillId,
   });
 
@@ -56,6 +81,8 @@ function buildContext(opts = {}) {
   const osInfo = detectOS();
   const openCode = detectOpenCode(project.root, configPath);
   const installed = readInstalled(targetDir);
+  const legacyDirs = legacyInstallDirs(project.root, { global: globalTarget })
+    .filter((d) => d !== targetDir);
 
   // A config file that exists but cannot be parsed is captured, not thrown:
   // doctor still runs its other checks, install stops with a clear error.
@@ -64,7 +91,7 @@ function buildContext(opts = {}) {
   let mcp = { present: false };
   if (configPath) {
     try {
-      registration = inspectRegistration(configPath, targetDir);
+      registration = inspectRegistration(configPath, targetDir, { skillId });
       mcp = inspectMcp(configPath);
     } catch (e) {
       configError = e;
@@ -72,13 +99,14 @@ function buildContext(opts = {}) {
   }
 
   return {
-    cwd, startDir, skillId, mode,
+    cwd, startDir, skillId, mode, global: globalTarget,
     projectRoot: project.root,
     projectSignals: project.signals,
     configPath,
     configError,
     skillsRoot, targetDir,
-    backupRoot: backupRootFor(project.root, { global: opts.global }),
+    legacyDirs,
+    backupRoot: backupRootFor(project.root, { global: globalTarget }),
     source, pkg, osInfo, openCode, installed,
     yes: Boolean(opts.yes),
     dryRun: Boolean(opts.dryRun),
@@ -101,4 +129,4 @@ function localMods(ctx) {
   return diffAgainstManifest(ctx.targetDir);
 }
 
-module.exports = { buildContext, compareInstalled, localMods, EXIT_OK, EXIT_ERROR, EXIT_ABORT };
+module.exports = { buildContext, scopeIsGlobal, compareInstalled, localMods, EXIT_OK, EXIT_ERROR, EXIT_ABORT };
