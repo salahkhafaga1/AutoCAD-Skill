@@ -11,6 +11,8 @@ This skill is a **reasoning and workflow layer**. It does not talk to AutoCAD
 directly and it does **not** replace the MCP tool layer — it drives a fixed,
 scoped set of MCP tools with engineering discipline.
 
+**Current version:** 0.1.0 (see `CHANGELOG.md`) · **Docs:** [`docs/`](docs/)
+
 ---
 
 ## Architecture
@@ -41,7 +43,7 @@ AutoCAD
 - Design intent and decisions
 - Assumptions and constraints tracking
 - Risk classification with human-approval gating
-- Continuation of unfinished projects
+- Continuation of unfinished projects and change management
 
 **autocad-mcp (separate repository, not included here) — the tool layer:**
 
@@ -49,9 +51,10 @@ AutoCAD
   management, layer and entity queries, geometry creation, editing,
   dimensions, and screenshots — exposed as a fixed set of MCP tools.
 
-The skill never calls tools outside the MCP contract and never modifies the
-MCP layer. See `tool_contracts.md` for the authoritative tool reference the
-skill is validated against.
+The skill never calls tools outside the MCP contract, never modifies the MCP
+layer, and never bundles it. `skill/engineering_agent/tool_contracts.md` is
+the authoritative tool reference the skill is validated against.
+Full details: [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
@@ -75,6 +78,8 @@ Understand → Analyze → Plan → Execute → Observe → Verify → Correct
 ---
 
 ## Workflow Modes
+
+Workflow files live under `skill/engineering_agent/workflows/`.
 
 | Mode | Trigger | Key rule | Workflow file |
 |------|---------|----------|---------------|
@@ -102,22 +107,20 @@ projects/{name}/
 ├── assumptions.md       ← what was assumed (confidence + approval status)
 ├── issues.md            ← what is blocking or unresolved
 ├── change_log.md        ← what changed and when
-└── phases/
-    ├── phase_01_*.md
-    ├── phase_02_*.md
-    └── ...
+└── phases/              ← phase files with steps, checks, results
 ```
 
-`schemas/` contains JSON schemas for these files and `templates/` contains
-blank starting templates. State is committed at phase milestones,
-checkpoints, and after verification — not after every individual step.
+JSON schemas for these files are in `skill/engineering_agent/schemas/`;
+blank starting templates in `skill/engineering_agent/templates/`. State is
+committed at phase milestones, checkpoints, and after verification — not
+after every individual step.
 
 ---
 
 ## Risk & Safety Model
 
 Every planned operation is classified before execution
-(full rules in `rules/risk_rules.md`):
+(full rules in `skill/engineering_agent/rules/risk_rules.md`):
 
 | Level | Examples | Behavior |
 |-------|----------|----------|
@@ -132,8 +135,6 @@ engineer decides; it does not make safety decisions autonomously.
 ---
 
 ## Verification: What It Can and Cannot Prove
-
-Be aware of the current verification boundary:
 
 **Can be verified with the current MCP integration:**
 
@@ -153,53 +154,65 @@ Be aware of the current verification boundary:
 
 MVP verification therefore relies on **handle/existence checks + layer/type/
 counts + screenshot inspection + operation results**. Geometry read-back is
-listed in the roadmap pending real-world testing.
+listed in the roadmap and gated behind a five-step process in
+[`docs/verification.md`](docs/verification.md).
 
 ---
 
 ## Current Status
 
-- **Static validation: PASS** — `tests/validate_skill.py` validates the
-  documentation against the actual MCP schemas (tool names, parameter names,
-  referenced files, forbidden/obsolete patterns).
-- **MCP wiring: TESTED** — the MCP server launches from a dedicated virtual
-  environment, exposes its full tool catalog, and returns a clean,
-  expected connection error when AutoCAD is absent.
-- **Live AutoCAD validation: PENDING** — this project does **not** claim
-  production-ready live AutoCAD testing. Live end-to-end testing remains a
-  separate step on a machine with AutoCAD installed and running.
+Test-level detail and evidence rules: [`docs/verification.md`](docs/verification.md).
+
+- **Level 1 — static validation: PASS** — `tests/validate_skill.py` validates
+  documentation and repo docs against the actual MCP schemas (tool names,
+  parameter names, referenced files, forbidden/obsolete patterns).
+- **Level 2 — offline MCP tests: PASS** — 105 tests against the external
+  autocad-mcp checkout, no AutoCAD required.
+- **Level 3 — MCP wiring: PASS pre-restructure, re-verification pending** —
+  skill advertisement and the 29-tool catalog were confirmed live; after the
+  repository restructure this must be re-confirmed on an OpenCode restart.
+- **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
+  production-ready live AutoCAD testing. AutoCAD is not installed on the
+  development machine; live end-to-end testing remains a separate step.
 
 ---
 
 ## Quick Start
 
-**Prerequisites:** Windows, Python 3.10+, an agent runtime (OpenCode), a
-checkout of the separate `autocad-mcp` server installed into a virtual
-environment, and — for live use only — AutoCAD with a drawing open.
+**Prerequisites:** Windows, Python 3.10+, OpenCode V2, a checkout of the
+separate autocad-mcp server installed into a virtual environment, and — for
+live use only — AutoCAD with a drawing open. Details:
+[`docs/installation.md`](docs/installation.md).
 
 ```powershell
 git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
 ```
 
-1. **Load the skill in OpenCode** — either place/clone this repository under
-   `.opencode/skills/engineering-cad-agent/` (auto-discovered), or add the
-   folder that contains it to the `skills` array in your `opencode.json`.
+1. **Load the skill in OpenCode** — add the skill folder to the `skills`
+   array in your project's `opencode.json`:
+
+   ```json
+   { "skills": ["AutoCAD-Skill/skill"] }
+   ```
+
+   Alternative: copy `AutoCAD-Skill/skill/engineering_agent/` to
+   `.opencode/skills/engineering_agent/` (auto-discovered).
 2. **Register the MCP server** — see `opencode.example.json` for the
-   project-local MCP configuration shape (`mcp.servers`, local server,
-   venv entry point, `ACAD_MCP_OUTPUT_ROOT`). Replace the placeholders with
-   your machine's paths; the example intentionally contains no machine paths.
+   project-local MCP configuration shape and [`docs/configuration.md`](docs/configuration.md)
+   for field-by-field guidance. Replace the placeholders with your machine's
+   paths; the example intentionally contains no machine paths.
 3. **Validate the skill:**
 
-```powershell
-python tests/validate_skill.py
-```
-
-Full parameter-vs-schema validation requires a checkout of `autocad-mcp`
-as a sibling directory; without it the validator runs in a clearly reported
-degraded mode (tool names only).
+   ```powershell
+   python tests/validate_skill.py
+   ```
 
 4. **Live use:** open AutoCAD with a drawing, then ask the agent to
    `create`, `continue`, `verify`, etc.
+
+> The planned `npx autocad-skill` installer is **structure only** in 0.1.0 —
+> see [`installer/npm/README.md`](installer/npm/README.md). Every command
+> there is marked PLANNED.
 
 ---
 
@@ -207,41 +220,76 @@ degraded mode (tool names only).
 
 ```
 .
-├── SKILL.md                  ← skill entry point: core loop, modes, policies
-├── tool_contracts.md         ← authoritative reference for all MCP tools
-├── opencode.example.json     ← example OpenCode skill + MCP wiring (placeholders)
-├── LICENSE
+├── skill/
+│   └── engineering_agent/        ← the portable skill unit
+│       ├── SKILL.md              ← entry point: loop, modes, policies
+│       ├── tool_contracts.md     ← authoritative MCP tool reference
+│       ├── skill.json            ← version manifest
+│       ├── workflows/            ← one workflow per operating mode (7 modes)
+│       ├── rules/                ← planning, verification, risk, stop
+│       │                           conditions, state sync, duplicate
+│       │                           prevention, requirements
+│       ├── schemas/              ← JSON schemas for project memory files
+│       ├── templates/            ← blank project memory templates
+│       └── examples/             ← worked simple_room example
+├── installer/npm/                ← npx layer: structure only (commands PLANNED)
+├── tests/
+│   └── validate_skill.py         ← Level 1 static validation
+├── docs/
+│   ├── architecture.md           ← layers, responsibilities, hard rules
+│   ├── installation.md           ← manual install (IMPLEMENTED), npx (PLANNED)
+│   ├── configuration.md          ← OpenCode wiring reference
+│   ├── development.md            ← structure, test levels, versioning policy
+│   └── verification.md           ← honest capability limits + level status
 ├── README.md
-├── workflows/                ← one workflow per operating mode (7 modes)
-├── rules/                    ← planning, verification, risk, stop conditions,
-│                               state sync, duplicate prevention, requirements
-├── schemas/                  ← JSON schemas for project memory files
-├── templates/                ← blank project memory templates
-├── examples/
-│   └── simple_room/          ← worked example (spec, state, phase files)
-└── tests/
-    └── validate_skill.py     ← static validation of the skill
+├── CHANGELOG.md
+├── LICENSE
+├── .gitignore
+└── opencode.example.json         ← placeholder-only wiring template
 ```
 
 ---
 
 ## Testing
 
-- **Skill validator** (part of this repository):
+Four test levels are defined in [`docs/development.md`](docs/development.md):
+
+- **Level 1 — Static skill validation (this repository):**
 
   ```powershell
   python tests/validate_skill.py
   ```
 
-  Checks that referenced workflow/rule/template files exist, that referenced
-  MCP tools and parameter names match the actual MCP schemas, and that
-  obsolete patterns are absent. Current result: **PASS**.
+  Checks that referenced skill files and repo-doc paths exist, that
+  referenced MCP tools and parameter names match the actual MCP schemas, and
+  that obsolete patterns are absent. Current result: **PASS**.
 
-- **MCP offline tests** live in the separate `autocad-mcp` repository and do
-  not require AutoCAD. They have been run successfully against this skill's
-  wiring environment (105 tests, OK).
+- **Level 2 — Offline MCP tests** live in the separate autocad-mcp
+  repository and do not require AutoCAD (105 tests, OK on the reference
+  setup).
 
-- **Live AutoCAD tests** are not part of this repository and remain pending.
+- **Level 3 — MCP wiring**: skill advertisement + tool discovery in a live
+  OpenCode session.
+
+- **Level 4 — Live AutoCAD**: real drawing operations end to end.
+  **PENDING — not claimed.**
+
+---
+
+## Documentation
+
+| Document | Contents |
+|----------|----------|
+| [`docs/architecture.md`](docs/architecture.md) | Layers, responsibilities, hard separation rules, state model |
+| [`docs/installation.md`](docs/installation.md) | Prerequisites, manual install, npx plan, uninstall |
+| [`docs/configuration.md`](docs/configuration.md) | `opencode.json` wiring, MCP server config, configuration safety |
+| [`docs/development.md`](docs/development.md) | Repo structure, test levels, versioning, change management |
+| [`docs/verification.md`](docs/verification.md) | Verification limits, geometry read-back gate, level status |
+| [`CHANGELOG.md`](CHANGELOG.md) | Released changes, semver classes, compatibility notes |
+| [`installer/npm/README.md`](installer/npm/README.md) | Installer behavior spec (PLANNED) |
+
+Every documented capability is marked **IMPLEMENTED** or **PLANNED**;
+planned functionality is never presented as working.
 
 ---
 
@@ -250,8 +298,12 @@ degraded mode (tool names only).
 Realistic future work only — none of these are implemented yet:
 
 - Live AutoCAD MVP validation (first end-to-end run against a real drawing)
+- Level 3 re-verification after the repository restructure (OpenCode restart)
 - Geometry read-back capability, **only if** live testing proves it necessary
-  (would be implemented in `autocad-mcp`, not in this skill)
+  (would be implemented in `autocad-mcp`, not in this skill, and only through
+  the five-step gate in `docs/verification.md`)
+- Implementing the `npx autocad-skill` commands per the behavior spec in
+  `installer/npm/README.md`
 - Additional engineering-specific worked examples
 - Broader automated integration tests
 

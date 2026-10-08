@@ -11,9 +11,14 @@ Checks (no AutoCAD, no network, no MCP connection):
      (skill docs AND tool_contracts.md, both against acad_core.py).
   4. Obsolete/forbidden patterns are absent.
 
-Tool schemas are loaded from ../autocad-mcp/autocad_mcp/acad_core.py when it
-can be imported (pywin32 required). Otherwise the script falls back to the
-tool headings in tool_contracts.md, skips parameter checks, and says so.
+Tool schemas are loaded from a sibling autocad-mcp checkout (found by
+walking up from the skill root) when acad_core.py can be imported
+(pywin32 required). Otherwise the script falls back to the tool headings
+in tool_contracts.md, skips parameter checks, and says so.
+
+Skill files are validated with paths relative to the skill root; repo-level
+docs (README.md, CHANGELOG.md, docs/) are validated with paths relative to
+the repository root.
 """
 
 import importlib.util
@@ -21,8 +26,20 @@ import re
 import sys
 from pathlib import Path
 
-SKILL_ROOT = Path(__file__).resolve().parents[1]
-MCP_CORE = SKILL_ROOT.parent / "autocad-mcp" / "autocad_mcp" / "acad_core.py"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SKILL_ROOT = REPO_ROOT / "skill" / "engineering_agent"
+
+
+def find_mcp_core():
+    """First autocad-mcp checkout found walking up from the skill root."""
+    for base in (SKILL_ROOT, *SKILL_ROOT.parents):
+        candidate = base / "autocad-mcp" / "autocad_mcp" / "acad_core.py"
+        if candidate.exists():
+            return candidate
+    return SKILL_ROOT / "autocad-mcp" / "autocad_mcp" / "acad_core.py"
+
+
+MCP_CORE = find_mcp_core()
 
 # Split across string literals on purpose: grepping this directory for the
 # complete obsolete names must return ZERO hits, yet the checker still needs
@@ -66,13 +83,19 @@ def main():
     warnings = []
     md_files = sorted(SKILL_ROOT.rglob("*.md"))
 
+    # Repo-level docs live outside the skill folder; refs are repo-root-based.
+    repo_docs = [p for p in (REPO_ROOT / "README.md", REPO_ROOT / "CHANGELOG.md") if p.exists()]
+    if (REPO_ROOT / "docs").is_dir():
+        repo_docs += sorted((REPO_ROOT / "docs").rglob("*.md"))
+    all_md = md_files + repo_docs
+
     # --- 1. Referenced skill files exist -----------------------------------
     refs_checked = 0
-    for md in md_files:
+    for md in all_md:
         text = md.read_text(encoding="utf-8")
         for ref in FILE_REF.findall(text):
             refs_checked += 1
-            if not (SKILL_ROOT / ref).exists():
+            if not ((SKILL_ROOT / ref).exists() or (REPO_ROOT / ref).exists()):
                 violations.append(f"{md.name}: missing referenced file `{ref}`")
         for mode in MODE_REF.findall(text):
             refs_checked += 1
@@ -91,7 +114,7 @@ def main():
 
     tool_refs_checked = 0
     if tools:
-        for md in md_files:
+        for md in all_md:
             text = md.read_text(encoding="utf-8")
 
             # Call sites: name(...) — validate tool names and argument keys.
@@ -166,7 +189,7 @@ def main():
 
     # --- 4. Forbidden patterns ---------------------------------------------
     forbidden_hits = []
-    for md in md_files:
+    for md in all_md:
         text = md.read_text(encoding="utf-8")
         for pattern in FORBIDDEN:
             count = text.count(pattern)
@@ -177,7 +200,7 @@ def main():
     # --- Report -------------------------------------------------------------
     print("== Engineering CAD Agent Skill validation ==")
     print(f"skill root : {SKILL_ROOT}")
-    print(f"md files   : {len(md_files)}")
+    print(f"md files   : {len(md_files)} (skill) + {len(repo_docs)} (repo docs)")
     print(f"[1] referenced files ............ {'OK' if not any('missing referenced' in v for v in violations) else 'FAIL'} ({refs_checked} references)")
     print(f"[2] MCP tool registry ........... {tool_source}")
     print(f"[3] parameter names ............. {contract_params_checked + tool_refs_checked} checked"

@@ -1,0 +1,28 @@
+{
+  "name": "autocad-skill",
+  "version": "0.1.0",
+  "description": "Installer and update layer for the Engineering CAD Agent Skill (OpenCode). Structure and interface only in 0.1.0 - all commands are PLANNED.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/salahkhafaga1/AutoCAD-Skill.git"
+  },
+  "bin": {
+    "autocad-skill": "bin/autocad-skill.js"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "autocad",
+    "cad",
+    "opencode",
+    "skill",
+    "agent",
+    "mcp"
+  ]
+}

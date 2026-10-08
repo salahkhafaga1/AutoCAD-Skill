@@ -26,6 +26,10 @@ env/
 Thumbs.db
 Desktop.ini
 
+# Installer / npm layer
+installer/npm/node_modules/
+installer/npm/*.tgz
+
 # Local AutoCAD / MCP runtime artifacts (generated output — never skill source)
 *.dwg
 *.dxf

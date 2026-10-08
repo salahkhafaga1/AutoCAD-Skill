@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "skills": ["<path-to-folder-containing-this-repo>"],
+  "skills": ["<path-to-this-repo>/skill"],
   "mcp": {
     "servers": {
       "autocad-mcp": {

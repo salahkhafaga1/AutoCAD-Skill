@@ -1,0 +1,8 @@
+{
+  "name": "engineering-cad-agent",
+  "id": "engineering_agent",
+  "version": "0.1.0",
+  "entry": "SKILL.md",
+  "toolContractVersion": 1,
+  "requiresMcpServer": "autocad-mcp"
+}
