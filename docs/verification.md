@@ -42,7 +42,7 @@ verification as available.
 |-------|-------|---------------------|
 | 1 — Static skill validation | File/tool/parameter/forbidden checks | **PASS** — automated, re-run after every change (`python tests/validate_skill.py`) |
 | 2 — Offline MCP tests | MCP server without AutoCAD | **PASS** — 105 tests, run against the external autocad-mcp checkout (no AutoCAD required) |
-| 3 — MCP wiring | Skill advertisement + MCP tool discovery in OpenCode | **PASS** pre-restructure (skill listed, 29 tools exposed, clean error without AutoCAD); **RE-VERIFICATION PENDING** after the repository restructure — requires an OpenCode restart |
+| 3 — MCP wiring | Skill advertisement + MCP tool discovery in OpenCode | **PASS (2026-10-08, post-restructure)** — skill re-discovered and loaded live as `engineering_agent` with base directory `skill/engineering_agent/`; MCP server exposes 29 tools (config untouched) |
 | 4 — Live AutoCAD | Real drawing operations end to end | **PENDING** — AutoCAD is not installed on the development machine. **Not tested, not claimed.** |
 
 Rules for updating this table:

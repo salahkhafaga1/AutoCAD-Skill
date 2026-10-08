@@ -55,9 +55,10 @@ and the work actually performed to reach it.
   not forked, never modified by this project.
 - Verification status in 0.1.0: Level 1 static validation **PASS**;
   Level 2 offline MCP tests **PASS** (run against the external
-  autocad-mcp checkout); Level 3 discovery/wiring **PASS** pre-restructure
-  and scheduled for re-verification; Level 4 live AutoCAD **PENDING**
-  (no AutoCAD on the development machine — not claimed).
+  autocad-mcp checkout); Level 3 discovery/wiring **PASS** (post-restructure
+  live reload: skill loaded from `skill/engineering_agent/`, 29 MCP tools);
+  Level 4 live AutoCAD **PENDING** (no AutoCAD on the development
+  machine — not claimed).
 
 ### Pre-release development (not separately versioned)
 

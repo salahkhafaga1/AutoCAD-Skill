@@ -168,9 +168,9 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
   parameter names, referenced files, forbidden/obsolete patterns).
 - **Level 2 — offline MCP tests: PASS** — 105 tests against the external
   autocad-mcp checkout, no AutoCAD required.
-- **Level 3 — MCP wiring: PASS pre-restructure, re-verification pending** —
-  skill advertisement and the 29-tool catalog were confirmed live; after the
-  repository restructure this must be re-confirmed on an OpenCode restart.
+- **Level 3 — MCP wiring: PASS (post-restructure)** — the skill was
+  re-discovered and loaded live from `skill/engineering_agent/` (ID
+  `engineering_agent`), and the MCP server still exposes all 29 tools.
 - **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
   production-ready live AutoCAD testing. AutoCAD is not installed on the
   development machine; live end-to-end testing remains a separate step.
@@ -298,7 +298,6 @@ planned functionality is never presented as working.
 Realistic future work only — none of these are implemented yet:
 
 - Live AutoCAD MVP validation (first end-to-end run against a real drawing)
-- Level 3 re-verification after the repository restructure (OpenCode restart)
 - Geometry read-back capability, **only if** live testing proves it necessary
   (would be implemented in `autocad-mcp`, not in this skill, and only through
   the five-step gate in `docs/verification.md`)
