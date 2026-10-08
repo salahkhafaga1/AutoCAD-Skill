@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-cad-agent/decision",
+  "title": "Design Decision Record",
+  "description": "Design intent record capturing why a specific geometry/element was created or modified",
+  "type": "object",
+  "required": ["id", "element_id", "decision", "intent", "timestamp"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^DEC-\\d{3}$",
+      "description": "Unique decision identifier, e.g. DEC-001"
+    },
+    "element_id": {
+      "type": "string",
+      "description": "Element ID associated with this design decision"
+    },
+    "handle": {
+      "type": "string",
+      "description": "AutoCAD entity handle if applicable"
+    },
+    "decision": {
+      "type": "string",
+      "description": "What design choice was made (position, sizing, material, layout)"
+    },
+    "intent": {
+      "type": "string",
+      "description": "Engineering rationale and design intent behind the choice"
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "CON-NNN references that informed this decision"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Element IDs this decision depends on or affects"
+    },
+    "alternatives_considered": {
+      "type": "string",
+      "description": "Alternative options considered and reasons for rejection"
+    },
+    "approval": {
+      "type": "string",
+      "enum": ["auto", "user_approved"],
+      "default": "auto"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

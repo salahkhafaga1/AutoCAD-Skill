@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-cad-agent/project_state",
+  "title": "Project State",
+  "description": "Live state of an Engineering CAD Agent project",
+  "type": "object",
+  "required": ["project_name", "last_updated", "current_mode", "handle_registry"],
+  "properties": {
+    "project_name": { "type": "string" },
+    "last_updated": { "type": "string", "format": "date-time" },
+    "current_mode": {
+      "type": "string",
+      "enum": ["NEW_PROJECT","CONTINUE_PROJECT","MODIFY_PROJECT","INSPECT_PROJECT",
+               "VERIFY_PROJECT","PLAN_ONLY","RECOVER_PROJECT","IDLE"]
+    },
+    "agent_state": {
+      "type": "string",
+      "enum": ["IDLE","UNDERSTANDING","MISSING_REQUIREMENTS","PLANNING",
+               "AWAITING_PLAN_APPROVAL","EXECUTING","OBSERVING","VERIFYING",
+               "CORRECTING","UPDATING_STATE","PAUSED","BLOCKED",
+               "AWAITING_APPROVAL","ERROR_RECOVERY","COMPLETE"]
+    },
+    "current_phase": { "type": "string" },
+    "phase_status": {
+      "type": "string",
+      "enum": ["NOT_STARTED","IN_PROGRESS","BLOCKED","COMPLETE","FAILED"]
+    },
+    "current_step": {
+      "type": "object",
+      "properties": {
+        "number": { "type": "integer" },
+        "total": { "type": "integer" },
+        "description": { "type": "string" }
+      }
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Human-readable description of the exact next action"
+    },
+    "completed_phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "phase_id": { "type": "string" },
+          "name": { "type": "string" },
+          "result": { "type": "string", "enum": ["PASS","FAIL"] },
+          "verified": { "type": "boolean" },
+          "completed_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "handle_registry": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["element_id", "handle", "description", "layer"],
+        "properties": {
+          "element_id": { "type": "string" },
+          "handle": { "type": "string" },
+          "object_type": { "type": "string" },
+          "description": { "type": "string" },
+          "layer": { "type": "string" },
+          "decision_ref": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "state_sync_record": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "layer": { "type": "string" },
+          "expected_count": { "type": "integer" },
+          "last_checked": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["OK","MISMATCH","UNKNOWN"] }
+        }
+      }
+    },
+    "checkpoint_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "dwg_path": { "type": "string" },
+          "phase": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "known_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "blocking": { "type": "boolean" },
+          "resolution": { "type": "string" }
+        }
+      }
+    }
+  }
+}

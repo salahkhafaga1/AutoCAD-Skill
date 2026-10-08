@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-cad-agent/change_log",
+  "title": "Change Log Record",
+  "description": "Audit record for modifications, creations, deletions, or corrections to CAD entities",
+  "type": "object",
+  "required": ["id", "timestamp", "type", "description", "affected_elements"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^CHG-\\d{3}$",
+      "description": "Unique change identifier, e.g. CHG-001"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["creation", "modification", "deletion", "correction", "rollback"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed explanation of what was changed"
+    },
+    "affected_elements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Element IDs affected by the change"
+    },
+    "before_state": {
+      "type": "string",
+      "description": "Summary of dimensions/positions/attributes prior to change"
+    },
+    "after_state": {
+      "type": "string",
+      "description": "Summary of dimensions/positions/attributes after change"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Engineering rationale or user request driving this change"
+    },
+    "checkpoint_path": {
+      "type": "string",
+      "description": "File path of the pre-change backup DWG if saved"
+    },
+    "approval": {
+      "type": "string",
+      "enum": ["auto", "user_approved"],
+      "default": "auto"
+    }
+  }
+}

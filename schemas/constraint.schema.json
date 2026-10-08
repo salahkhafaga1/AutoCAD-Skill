@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-cad-agent/constraint",
+  "title": "Constraint Record",
+  "description": "A dimensional, spatial, code, or user-defined constraint governing CAD elements",
+  "type": "object",
+  "required": ["id", "type", "target_elements", "rule", "priority", "verified"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^CON-\\d{3}$",
+      "description": "Unique constraint identifier, e.g. CON-001"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short descriptive title of the constraint"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["dimensional", "spatial", "adjacency", "structural", "code", "user_defined"]
+    },
+    "target_elements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Element IDs or element types targeted by this constraint"
+    },
+    "rule": {
+      "type": "string",
+      "description": "Formal rule description (e.g. width >= 900mm, clearance >= 1200mm)"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source standard, building code reference, or requirement ID (e.g. REQ-003)"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "description": "HIGH cannot be violated; MEDIUM requires warning; LOW is preference"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "last_checked": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

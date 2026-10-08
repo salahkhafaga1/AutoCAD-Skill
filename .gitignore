@@ -1,0 +1,38 @@
+# Python
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Secrets & environment files
+.env
+.env.*
+!.env.example
+
+# Logs & temporary files
+*.log
+*.tmp
+~$*
+*.bak
+
+# IDE / OS private state
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local AutoCAD / MCP runtime artifacts (generated output — never skill source)
+*.dwg
+*.dxf
+*.dwt
+*.bak
+*.dwl
+*.dwl2
+screenshots/
+checkpoints/
+projects/

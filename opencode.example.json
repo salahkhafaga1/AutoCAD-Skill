@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": ["<path-to-folder-containing-this-repo>"],
+  "mcp": {
+    "servers": {
+      "autocad-mcp": {
+        "type": "local",
+        "command": ["<path-to-autocad-mcp-checkout>\\.venv\\Scripts\\autocad-mcp.exe"],
+        "environment": {
+          "ACAD_MCP_OUTPUT_ROOT": "<directory-for-generated-drawings-and-project-memory>"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-cad-agent/assumption",
+  "title": "Assumption Record",
+  "description": "An assumption made by the agent when requirements or constraints are underspecified",
+  "type": "object",
+  "required": ["id", "assumption", "reason", "confidence", "status", "timestamp"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ASM-\\d{3}$",
+      "description": "Unique assumption identifier, e.g. ASM-001"
+    },
+    "assumption": {
+      "type": "string",
+      "description": "What specific engineering/design premise was assumed"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why the assumption was necessary and what default/logic was applied"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["HIGH", "MEDIUM", "LOW"],
+      "description": "Confidence level in the validity of this assumption"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["UNRESOLVED", "APPROVED", "REJECTED"],
+      "default": "UNRESOLVED",
+      "description": "Human approval status of the assumption"
+    },
+    "impact": {
+      "type": "string",
+      "description": "Downstream design components affected if this assumption is modified"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

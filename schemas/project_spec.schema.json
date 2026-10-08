@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-cad-agent/project_spec",
+  "title": "Project Specification",
+  "description": "Structured requirements and scope for an Engineering CAD Agent project",
+  "type": "object",
+  "required": ["name", "type", "status", "created_at", "dwg_path", "requirements"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Short human-readable project name"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["residential", "commercial", "industrial", "mechanical", "structural", "infrastructure", "other"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PLANNING", "IN_PROGRESS", "PAUSED", "COMPLETE", "REQUIRES_RECOVERY"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "last_updated": { "type": "string", "format": "date-time" },
+    "dwg_path": {
+      "type": "string",
+      "description": "Path relative to ACAD_MCP_OUTPUT_ROOT"
+    },
+    "insunits": {
+      "type": "integer",
+      "description": "AutoCAD INSUNITS code (4=mm, 6=m, 1=inches)"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "source", "priority"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^REQ-\\d{3}$" },
+          "description": { "type": "string" },
+          "source": { "type": "string", "enum": ["user", "standard", "regulation", "default"] },
+          "priority": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+          "verified": { "type": "boolean", "default": false },
+          "verification_result": {
+            "type": "object",
+            "properties": {
+              "method": { "type": "string" },
+              "measured_value": { "type": "string" },
+              "result": { "type": "string", "enum": ["PASS", "FAIL"] },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "missing_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "blocks_execution": { "type": "boolean" }
+        }
+      }
+    },
+    "complexity": {
+      "type": "string",
+      "enum": ["SIMPLE", "MODERATE", "COMPLEX", "ENTERPRISE"]
+    },
+    "scope_included": { "type": "array", "items": { "type": "string" } },
+    "scope_excluded": { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "engineering-cad-agent/phase",
+  "title": "Phase Definition",
+  "description": "A decomposed phase of work with steps, dependencies, and quality gate",
+  "type": "object",
+  "required": ["phase_id", "name", "goal", "steps", "completion_criteria"],
+  "properties": {
+    "phase_id": { "type": "string", "pattern": "^\\d{2}$" },
+    "name": { "type": "string" },
+    "goal": { "type": "string", "description": "One sentence describing what this phase achieves" },
+    "prerequisites": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Phase IDs that must be COMPLETE before this phase begins"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["NOT_STARTED","IN_PROGRESS","BLOCKED","COMPLETE","FAILED"]
+    },
+    "risk_level": { "type": "string", "enum": ["GREEN","YELLOW","RED"] },
+    "requires_approval": { "type": "boolean", "default": false },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step_number", "description", "tool", "risk"],
+        "properties": {
+          "step_number": { "type": "integer" },
+          "description": { "type": "string" },
+          "tool": { "type": "string", "description": "MCP tool name" },
+          "arguments_summary": { "type": "string" },
+          "risk": { "type": "string", "enum": ["GREEN","YELLOW","RED"] },
+          "verification": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["NOT_STARTED","COMPLETE","FAILED","SKIPPED"]
+          }
+        }
+      }
+    },
+    "completion_criteria": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Specific, verifiable conditions that define phase completion"
+    },
+    "quality_gate": {
+      "type": "object",
+      "properties": {
+        "dimensions_to_verify": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "expected_mm": { "type": "number" },
+              "tolerance_mm": { "type": "number", "default": 1 }
+            }
+          }
+        },
+        "entity_counts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "layer": { "type": "string" },
+              "expected_count": { "type": "integer" }
+            }
+          }
+        },
+        "screenshot_required": { "type": "boolean", "default": true },
+        "result": { "type": "string", "enum": ["NOT_RUN","PASS","FAIL"] }
+      }
+    },
+    "checkpoint_path": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": "string", "format": "date-time" }
+  }
+}
