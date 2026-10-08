@@ -82,7 +82,7 @@ can be published. See `docs/development.md` for the release steps.
 - `skill/engineering_agent/skill.json`: `id` is now `engineering-cad`,
   `name` is now the display string `Engineering CAD Agent`. The skill version
   stays 0.1.0 and the tool contract version stays 1.
-- Test suite: 34 → 60 tests; tests are now hermetic against both the real home
+- Test suite: 34 → 61 tests; tests are now hermetic against both the real home
   directory and stale packaged build artifacts, and cover migration refresh,
   preservation of user edits/added files/deletions, refusal of an invalid old
   copy, and a user-added file surviving consecutive updates.

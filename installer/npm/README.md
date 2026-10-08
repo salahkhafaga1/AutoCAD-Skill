@@ -252,7 +252,7 @@ copy differs from the available one.
 - Layout: `bin/` (argument parsing and dispatch), `lib/` (helpers, migration,
   and the four commands), `scripts/prepack.js` (packaging), `test/`
   (node:test suite).
-- Tests: `npm test` — 60 tests covering install detection, the default global
+- Tests: `npm test` — 61 tests covering install detection, the default global
   target, `--local`, migration and its safety rules (refresh, preservation of
   user edits/added files, refusal of an invalid old copy), skill id/discovery
   frontmatter requirements, dry-run, config preservation, local-modification
