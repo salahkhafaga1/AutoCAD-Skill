@@ -9,7 +9,69 @@ follows [Semantic Versioning](https://semver.org/):
 - **MINOR** — backward-compatible new workflow, rule, or capability.
 - **MAJOR** — breaking behavioral or structural changes.
 
+The npm package (`installer/npm/package.json`) is versioned separately from
+the skill: 0.1.0 is the skill, 0.2.0 is the installer, and the tool contract
+version is 1. A package-only release does not change the skill version.
+
 No change is recorded here until it actually exists in the repository.
+
+---
+
+## [0.2.0] - 2026-10-08
+
+npm installer release. **The skill itself is unchanged** — every file under
+`skill/engineering_agent/` is byte-identical to 0.1.0 and `skill.json` stays
+at 0.1.0. The 0.2.0 version belongs to the `autocad-skill` npm package only.
+
+### Added
+
+- `autocad-skill install` — copies the skill to
+  `.opencode/skills/engineering_agent/`, or to
+  `~/.config/opencode/skills/engineering_agent/` with `--global`, writes a
+  SHA-256 manifest of what it wrote, and validates the result. Re-running is
+  a no-op. The default install writes no configuration at all, so an existing
+  `opencode.json` stays byte-for-byte identical.
+- `autocad-skill update` — prints current and available versions, every file
+  to be added, changed, or removed, and any locally modified files; requires
+  explicit confirmation with the default **[y/N] = N**; copies the installed
+  skill to a backup outside the skills root before writing; re-validates
+  afterwards. Non-interactive runs without `--yes` abort with exit code 2 and
+  change nothing.
+- `autocad-skill update --rollback` — restores the most recent backup,
+  removing files the update added and keeping files edited after it.
+- `autocad-skill doctor` — read-only checks of Node, npm, OpenCode, the
+  installed skill, integrity, local modifications, update availability, the
+  OpenCode configuration, autocad-mcp, Python, and AutoCAD. Exits non-zero
+  only when a check reports an error.
+- `autocad-skill version` — prints skill, installer, and tool-contract
+  versions, plus the installed version when it differs from the available one.
+- Options: `--dry-run` on every command, `--yes` for scripts, `--project` for
+  an explicit target, and opt-in `--register`, which confirms before adding a
+  `skills` entry and backs the config file up first.
+- `installer/npm/test/` — 34 tests using Node's built-in test runner with no
+  dependencies, every one of them against a throwaway directory in the OS temp
+  folder. No test writes into the repository or into a real OpenCode project.
+
+### Changed
+
+- `installer/npm/package.json` 0.1.0 → 0.2.0. The four commands are no longer
+  interface stubs; they perform the behavior described above.
+- `installer/npm/README.md` rewritten from a behavior spec into documentation
+  of the implemented behavior.
+- `README.md`, `docs/installation.md`, `docs/configuration.md`,
+  `docs/development.md`, `docs/architecture.md`, and `docs/verification.md`
+  updated to mark the installer IMPLEMENTED instead of PLANNED.
+- `.gitignore` now excludes the package copies that the prepack step
+  generates.
+
+### Compatibility notes
+
+- No skill behavior, rules, risk model, or verification semantics changed.
+- `autocad-mcp` remains an external, separate dependency — not bundled, not
+  forked, never modified by this project.
+- Verification status: Level 1 static validation **PASS**; Level 2 offline
+  MCP tests **PASS** (105); Level 3 discovery/wiring **PASS**; Level 4 live
+  AutoCAD **PENDING** (not claimed); installer test suite **PASS** (34).
 
 ---
 

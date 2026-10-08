@@ -1,7 +1,7 @@
 # Development
 
 Status: **IMPLEMENTED** — how this repository is organized and how to change
-it safely. Installer-specific behavior is marked PLANNED.
+it safely.
 
 ## Repository structure
 
@@ -17,7 +17,7 @@ it safely. Installer-specific behavior is marked PLANNED.
 │       ├── schemas/              ← project memory JSON schemas
 │       ├── templates/            ← blank memory templates
 │       └── examples/             ← worked example project
-├── installer/npm/                ← npx distribution layer (structure only)
+├── installer/npm/                ← npx distribution layer (install/update/doctor/version)
 ├── tests/
 │   └── validate_skill.py         ← Level 1 static validation
 ├── docs/                         ← architecture, install, config, dev, verify
@@ -49,6 +49,21 @@ Rules:
 **Never report Level 4 as passed unless real AutoCAD was tested.** Current
 status of each level: `docs/verification.md`.
 
+## Installer test suite — IMPLEMENTED
+
+The npm layer has its own tests, separate from the four levels above:
+
+```powershell
+cd installer/npm
+npm test
+```
+
+They use Node's built-in test runner with no dependencies: 34 tests covering
+install detection, dry-run, config preservation, local-modification
+detection, update confirmation, rollback, doctor output, and invalid
+environments. Every test runs against a throwaway directory in the OS temp
+folder — no test writes into the repository or into a real OpenCode project.
+
 ## Changing the skill
 
 1. Edit skill files inside `skill/engineering_agent/`.
@@ -61,20 +76,26 @@ status of each level: `docs/verification.md`.
 5. For structural changes: produce a change proposal and get explicit
    approval before touching files.
 
-## Versioning — IMPLEMENTED policy, enforcement PLANNED
+## Versioning — IMPLEMENTED
 
-`skill/engineering_agent/skill.json` holds the version; `CHANGELOG.md`
+`skill/engineering_agent/skill.json` holds the skill version; `CHANGELOG.md`
 records every released change.
 
 - **PATCH** — documentation, typo, wording, non-behavioral fixes.
 - **MINOR** — backward-compatible new workflow/rule/capability.
 - **MAJOR** — breaking behavioral or structural changes.
 
-Update policy (will be enforced by `installer/npm`, currently by
-discipline): never silently overwrite a customized local skill — detect the
-installed version, compare, show what changes, detect local modifications,
-require explicit confirmation before applying anything that can change
-agent behavior.
+The npm package carries its own, separate version in
+`installer/npm/package.json`. It does not move together with the skill: the
+skill is 0.1.0, the installer is 0.2.0, and the tool contract version is 1.
+`autocad-skill version` prints all three.
+
+Update policy — now enforced in code by the installer rather than by
+discipline alone: never silently overwrite a customized local skill — detect
+the installed version, compare, show what changes, detect local
+modifications, require explicit confirmation before applying anything that
+can change agent behavior, and keep a backup that `update --rollback` can
+restore.
 
 ## Confirmation policy
 

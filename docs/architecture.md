@@ -97,7 +97,7 @@ MODIFY, and RECOVER without restarting a project.
 
 ```
 GitHub (versioned source)
-  → npm / npx installer (distribution & update layer — PLANNED, structure in place)
+  → npm / npx installer (distribution & update layer — IMPLEMENTED)
     → OpenCode (runtime, discovers skill via `skills` config)
       → autocad-mcp (external dependency)
         → AutoCAD

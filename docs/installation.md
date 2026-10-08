@@ -55,9 +55,7 @@ yet built (see `installer/npm/README.md`).
    findable above the skill folder; otherwise the validator runs in a clearly
    reported degraded mode.
 
-## Install via npx — PLANNED
-
-Intended experience (not implemented in 0.1.0):
+## Install via npx — IMPLEMENTED (installer 0.2.0)
 
 ```
 npx autocad-skill install
@@ -66,9 +64,25 @@ npx autocad-skill doctor
 npx autocad-skill version
 ```
 
-The package structure exists under `installer/npm/`; the commands are
-interface stubs. See `installer/npm/README.md` for the specified behavior
-(update confirmation, local-modification protection, configuration safety).
+The package lives in `installer/npm/` and is published as `autocad-skill`.
+Its behavior is documented in `installer/npm/README.md`; the important points:
+
+- The default install copies the skill to `.opencode/skills/engineering_agent/`,
+  the location OpenCode discovers automatically, so it changes **no**
+  configuration. An existing `opencode.json` stays byte-for-byte identical;
+  `--register` is the explicit opt-in that confirms first, backs the config
+  up, and appends one path.
+- `update` shows the current and available versions, every file that changes,
+  and any locally modified files — then asks for confirmation with the
+  default **[y/N] = N**. It copies the installed skill to a backup directory
+  outside the skills root before writing; `update --rollback` restores it.
+- `doctor` is read-only and exits non-zero only when a check reports an
+  error.
+- Every command accepts `--dry-run`.
+
+Exit codes: `0` success, `1` error, `2` aborted or confirmation required.
+Live AutoCAD behavior is **not** claimed by the installer or its tests;
+that remains Level 4 (PENDING) — see `docs/verification.md`.
 
 ## Live use — IMPLEMENTED (requires AutoCAD)
 

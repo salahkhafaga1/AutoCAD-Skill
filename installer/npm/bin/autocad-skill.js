@@ -2,62 +2,125 @@
 "use strict";
 
 /*
- * autocad-skill — CLI entry point (STRUCTURE ONLY, v0.1.0).
+ * autocad-skill — CLI entry point.
  *
- * This binary intentionally performs NO file-system or configuration
- * changes. Every command below is PLANNED: it parses the invocation,
- * reports the planned behavior, and exits non-zero so no wrapper can
- * mistake it for completed work.
+ * Commands: install (default) | update | doctor | version | help
  *
- * Specified future behavior lives in installer/npm/README.md:
- *   install / update / doctor / version — with version detection,
- *   local-modification protection, change display, and explicit
- *   confirmation before anything that can change agent behavior.
+ * Global flags:
+ *   --project <dir>   project to operate on (default: walk up from cwd)
+ *   --global          use ~/.config/opencode/skills instead of the project
+ *   --yes, -y         skip confirmation prompts (scripts / CI)
+ *   --dry-run         show what would change, then exit without changing it
+ *   --register        install only: also append the skill path to the
+ *                     opencode.json skills array (confirmed, backed up)
+ *   --rollback        update only: restore the most recent backup
+ *
+ * Exit codes: 0 success · 1 error · 2 aborted (declined / needs a terminal)
  */
 
+const ui = require("../lib/ui");
+
 const COMMANDS = {
-  install:
-    "PLANNED — will install the skill into an OpenCode project (safe config merge, explicit confirmation).",
-  update:
-    "PLANNED — will detect installed version, compare, show changes, detect local modifications, and require confirmation before applying.",
-  doctor:
-    "PLANNED — will check skill integrity, OpenCode wiring, and autocad-mcp availability.",
-  version:
-    "PLANNED — will read the installed skill.json manifest and report the skill version.",
+  install: () => require("../lib/commands/install"),
+  update: () => require("../lib/commands/update"),
+  doctor: () => require("../lib/commands/doctor"),
+  version: () => require("../lib/commands/version"),
 };
 
 function usage() {
-  console.log([
+  return [
     "autocad-skill — installer for the Engineering CAD Agent Skill",
     "",
-    "Usage: npx autocad-skill <command>",
+    "Usage: npx autocad-skill [command] [options]",
     "",
     "Commands:",
-    ...Object.keys(COMMANDS).map((c) => `  ${c.padEnd(10)} ${COMMANDS[c]}`),
+    "  install     Copy the skill into the OpenCode project (default)",
+    "  update      Compare, show changes, back up, then apply after confirmation",
+    "  update --rollback  Restore the most recent backup",
+    "  doctor      Read-only environment and installation checks",
+    "  version     Print skill, installer, and tool-contract versions",
+    "  help        Show this message",
     "",
-    "Status: interface and structure only in this version.",
-    "Documentation: installer/npm/README.md and docs/installation.md",
-  ].join("\n"));
+    "Options:",
+    "  --project <dir>  Project to operate on (default: walk up from the cwd)",
+    "  --global         Operate on ~/.config/opencode/skills instead",
+    "  --yes, -y        Skip confirmation prompts (scripts / CI)",
+    "  --dry-run        Show what would change; change nothing",
+    "  --register       Also add the skill path to the opencode.json skills array",
+    "  --rollback       (update) Restore the most recent backup",
+    "",
+    "Exit codes: 0 success · 1 error · 2 aborted (declined or needs a terminal)",
+    "Docs: installer/npm/README.md and docs/installation.md",
+  ].join("\n");
 }
 
-function main(argv) {
-  const command = argv[0];
-
-  if (!command || command === "--help" || command === "-h" || command === "help") {
-    usage();
-    return 0;
+function parseArgs(argv) {
+  const opts = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--help" || a === "-h") opts.help = true;
+    else if (a === "--yes" || a === "-y") opts.yes = true;
+    else if (a === "--dry-run") opts.dryRun = true;
+    else if (a === "--register") opts.register = true;
+    else if (a === "--rollback") opts.rollback = true;
+    else if (a === "--global") opts.global = true;
+    else if (a === "--project") {
+      const v = argv[++i];
+      if (v === undefined) throw Object.assign(new Error("--project requires a directory"), { code: "EBADFLAG" });
+      opts.project = v;
+    } else if (a.startsWith("--project=")) {
+      opts.project = a.slice("--project=".length);
+    } else if (a.startsWith("-")) {
+      throw Object.assign(new Error(`Unknown option: ${a}`), { code: "EBADFLAG" });
+    } else {
+      opts._.push(a);
+    }
   }
+  return opts;
+}
 
-  if (Object.prototype.hasOwnProperty.call(COMMANDS, command)) {
-    console.log(`autocad-skill ${command}: not implemented yet.`);
-    console.log(COMMANDS[command]);
-    console.log("This release ships structure only; see installer/npm/README.md.");
+async function main(argv) {
+  let opts;
+  try {
+    opts = parseArgs(argv);
+  } catch (e) {
+    ui.err(e.message);
+    process.stderr.write(usage() + "\n");
     return 1;
   }
 
-  console.error(`Unknown command: ${command}`);
-  usage();
-  return 1;
+  const command = opts._[0];
+
+  if (opts.help || command === "help" || command === "--help" || command === "-h") {
+    process.stdout.write(usage() + "\n");
+    return 0;
+  }
+
+  if (!command) {
+    // No command given: install is the default (npx autocad-skill).
+    opts.command = "install";
+  } else if (Object.prototype.hasOwnProperty.call(COMMANDS, command)) {
+    opts.command = command;
+  } else {
+    ui.err(`Unknown command: ${command}`);
+    process.stderr.write(usage() + "\n");
+    return 1;
+  }
+
+  const mod = COMMANDS[opts.command]();
+  try {
+    return await mod.run(opts);
+  } catch (e) {
+    ui.err(e.message || String(e));
+    if (process.env.AUTOCAD_SKILL_DEBUG) process.stderr.write(String(e.stack || "") + "\n");
+    return 1;
+  }
 }
 
-process.exit(main(process.argv.slice(2)));
+main(process.argv.slice(2)).then(
+  (code) => process.exit(code),
+  (e) => {
+    ui.err(e && e.message ? e.message : String(e));
+    process.exit(1);
+  }
+);

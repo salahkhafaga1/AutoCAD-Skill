@@ -1,0 +1,75 @@
+"use strict";
+
+/*
+ * prepack — assemble the publishable package.
+ *
+ * npm packages cannot include files outside the package root, so this script
+ * copies the skill source and the license into installer/npm/ right before
+ * `npm pack` / `npm publish`. Everything it creates is gitignored; it is
+ * regenerated on every pack, so the working tree copy can never go stale.
+ *
+ * Nothing here is ever committed.
+ */
+
+const fs = require("fs");
+const path = require("path");
+
+const PKG_ROOT = path.resolve(__dirname, "..");
+const REPO_ROOT = path.resolve(PKG_ROOT, "..", "..");
+
+const COPIES = [
+  { from: path.join(REPO_ROOT, "skill", "engineering_agent"), to: path.join(PKG_ROOT, "skill", "engineering_agent"), dir: true },
+  { from: path.join(REPO_ROOT, "LICENSE"), to: path.join(PKG_ROOT, "LICENSE") },
+  { from: path.join(REPO_ROOT, "CHANGELOG.md"), to: path.join(PKG_ROOT, "CHANGELOG.md") },
+];
+
+/** Directories/files that must never be packaged. */
+const BANNED = [
+  /(^|\/)node_modules(\/|$)/,
+  /(^|\/)__pycache__(\/|$)/,
+  /(^|\/)\.venv(\/|$)/,
+  /(^|\/)\.git(\/|$)/,
+  /\.(log|pyc|pyo)$/i,
+  /(^|\/)\.env(\.|$)/,
+];
+
+function main() {
+  for (const c of COPIES) {
+    if (!fs.existsSync(c.from)) {
+      console.error(`prepack: missing required source: ${c.from}`);
+      process.exit(1);
+    }
+    fs.rmSync(c.to, { recursive: true, force: true });
+    fs.mkdirSync(path.dirname(c.to), { recursive: true });
+    if (c.dir) fs.cpSync(c.from, c.to, { recursive: true });
+    else fs.copyFileSync(c.from, c.to);
+    console.log(`prepack: ${path.relative(REPO_ROOT, c.from)} -> ${path.relative(REPO_ROOT, c.to)}`);
+  }
+
+  // Sanity: the packaged skill must be complete.
+  const skillDir = path.join(PKG_ROOT, "skill", "engineering_agent");
+  for (const required of ["SKILL.md", "skill.json"]) {
+    if (!fs.existsSync(path.join(skillDir, required))) {
+      console.error(`prepack: packaged skill is missing ${required}`);
+      process.exit(1);
+    }
+  }
+
+  // Report (do not fail on) anything that looks like it should not ship.
+  let suspicious = 0;
+  const walk = (dir, rel) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? `${rel}/${entry.name}` : entry.name;
+      if (BANNED.some((re) => re.test(r))) {
+        console.warn(`prepack: WARNING excluded-looking path present: ${r}`);
+        suspicious++;
+        continue;
+      }
+      if (entry.isDirectory()) walk(path.join(dir, entry.name), r);
+    }
+  };
+  walk(PKG_ROOT, "");
+  if (suspicious) console.warn(`prepack: ${suspicious} suspicious path(s) found — check the npm pack file list.`);
+}
+
+main();

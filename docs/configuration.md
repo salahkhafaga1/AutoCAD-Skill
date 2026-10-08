@@ -66,7 +66,7 @@ differs only in machine-specific paths.
 - The venv entry point keeps Python dependencies isolated — no global
   Python installs.
 
-## Configuration safety rules — policy (installer enforcement PLANNED)
+## Configuration safety rules — IMPLEMENTED (enforced by the installer)
 
 1. Read existing configuration before writing; never replace a user's
    `opencode.json` wholesale.
@@ -76,8 +76,21 @@ differs only in machine-specific paths.
 5. Request explicit confirmation before any change that can alter agent
    behavior.
 
-Manual changes today follow the same rules by discipline; the
-`installer/npm` layer will enforce them when implemented (PLANNED).
+Manual changes follow the same rules by discipline; the `autocad-skill`
+installer enforces them in code:
+
+- The default install writes **no configuration at all** — the skill goes to
+  the auto-discovered `.opencode/skills/` location, and an existing
+  `opencode.json` stays byte-for-byte identical.
+- `install --register` is the explicit opt-in: it confirms first, backs the
+  config up to `opencode.json.autocad-skill-backup`, and appends exactly one
+  path while preserving every other key.
+- A `skills` value that is not an array, or a config file that cannot be
+  parsed, is refused rather than rewritten.
+- A `skills` entry that already provides this skill id is reported, and a
+  second copy is only created after explicit confirmation.
+- The `mcp.servers.autocad-mcp` block is never modified; the installer reads
+  it and reports what it finds, nothing more.
 
 ## Troubleshooting
 

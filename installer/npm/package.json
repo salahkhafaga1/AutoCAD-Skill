@@ -1,19 +1,31 @@
 {
   "name": "autocad-skill",
-  "version": "0.1.0",
-  "description": "Installer and update layer for the Engineering CAD Agent Skill (OpenCode). Structure and interface only in 0.1.0 - all commands are PLANNED.",
+  "version": "0.2.0",
+  "description": "Installer, updater, and doctor for the Engineering CAD Agent Skill (OpenCode). Copies plain Markdown/JSON skill files into place; never bundles autocad-mcp.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/salahkhafaga1/AutoCAD-Skill.git"
+  },
+  "homepage": "https://github.com/salahkhafaga1/AutoCAD-Skill#readme",
+  "bugs": {
+    "url": "https://github.com/salahkhafaga1/AutoCAD-Skill/issues"
   },
   "bin": {
     "autocad-skill": "bin/autocad-skill.js"
   },
   "files": [
     "bin",
-    "README.md"
+    "lib",
+    "skill",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
+  "scripts": {
+    "prepack": "node scripts/prepack.js",
+    "test": "node --test test/"
+  },
   "engines": {
     "node": ">=18"
   },
@@ -23,6 +35,7 @@
     "opencode",
     "skill",
     "agent",
-    "mcp"
+    "mcp",
+    "installer"
   ]
 }

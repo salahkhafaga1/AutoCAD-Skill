@@ -52,3 +52,22 @@ Rules for updating this table:
 - Level 4 requires a real AutoCAD session — never infer it from offline
   results.
 - Every status change is recorded in `CHANGELOG.md`.
+
+## Installer test suite — separate from the four levels
+
+The npm distribution layer has its own automated suite. It is **not** a test
+level: it verifies the installer's file and configuration handling only, and
+it proves nothing about AutoCAD or about skill behavior at run time.
+
+| Suite | Scope | Status (2026-10-08) |
+|-------|-------|---------------------|
+| Installer tests | CLI behavior of install, update, rollback, doctor, version | **PASS** — 34 tests, run with `npm test` in `installer/npm/`, zero dependencies |
+
+What it covers: install detection, re-run no-op, dry-run creating nothing,
+`opencode.json` preservation byte-for-byte, registration with backup and
+idempotence, local-modification detection, update confirmation refusing
+non-interactive runs with exit code 2, apply-after-`--yes` with backup,
+rollback, doctor output and exit codes, and invalid environments.
+
+What it does **not** cover: live AutoCAD, OpenCode at run time, and any
+claim about skill behavior — those remain Level 3 / Level 4 territory.

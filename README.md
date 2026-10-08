@@ -174,6 +174,10 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 - **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
   production-ready live AutoCAD testing. AutoCAD is not installed on the
   development machine; live end-to-end testing remains a separate step.
+- **Installer tests: PASS** — 34 automated tests of the npm CLI (install
+  detection, dry-run, config preservation, local-modification detection,
+  update confirmation, rollback, doctor, invalid environments). No test
+  writes into the repository or into a real OpenCode project.
 
 ---
 
@@ -188,14 +192,22 @@ live use only — AutoCAD with a drawing open. Details:
 git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
 ```
 
-1. **Load the skill in OpenCode** — add the skill folder to the `skills`
-   array in your project's `opencode.json`:
+1. **Load the skill in OpenCode** — either run the installer:
+
+   ```powershell
+   npx autocad-skill install
+   ```
+
+   which copies the skill to `.opencode/skills/engineering_agent/` (the
+   auto-discovered location) and writes no configuration at all, or register
+   it yourself by adding the skill folder to the `skills` array in your
+   project's `opencode.json`:
 
    ```json
    { "skills": ["AutoCAD-Skill/skill"] }
    ```
 
-   Alternative: copy `AutoCAD-Skill/skill/engineering_agent/` to
+   Manual alternative: copy `AutoCAD-Skill/skill/engineering_agent/` to
    `.opencode/skills/engineering_agent/` (auto-discovered).
 2. **Register the MCP server** — see `opencode.example.json` for the
    project-local MCP configuration shape and [`docs/configuration.md`](docs/configuration.md)
@@ -210,9 +222,10 @@ git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
 4. **Live use:** open AutoCAD with a drawing, then ask the agent to
    `create`, `continue`, `verify`, etc.
 
-> The planned `npx autocad-skill` installer is **structure only** in 0.1.0 —
-> see [`installer/npm/README.md`](installer/npm/README.md). Every command
-> there is marked PLANNED.
+> The `npx autocad-skill` installer is **IMPLEMENTED** since installer 0.2.0
+> (`install`, `update`, `rollback`, `doctor`, `version`) — see
+> [`installer/npm/README.md`](installer/npm/README.md) for the full behavior,
+> including confirmation defaults, backups, and local-modification protection.
 
 ---
 
@@ -232,12 +245,12 @@ git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
 │       ├── schemas/              ← JSON schemas for project memory files
 │       ├── templates/            ← blank project memory templates
 │       └── examples/             ← worked simple_room example
-├── installer/npm/                ← npx layer: structure only (commands PLANNED)
+├── installer/npm/                ← npx layer: install/update/doctor/version
 ├── tests/
 │   └── validate_skill.py         ← Level 1 static validation
 ├── docs/
 │   ├── architecture.md           ← layers, responsibilities, hard rules
-│   ├── installation.md           ← manual install (IMPLEMENTED), npx (PLANNED)
+│   ├── installation.md           ← manual install + npx installer (IMPLEMENTED)
 │   ├── configuration.md          ← OpenCode wiring reference
 │   ├── development.md            ← structure, test levels, versioning policy
 │   └── verification.md           ← honest capability limits + level status
@@ -274,6 +287,11 @@ Four test levels are defined in [`docs/development.md`](docs/development.md):
 - **Level 4 — Live AutoCAD**: real drawing operations end to end.
   **PENDING — not claimed.**
 
+The npm installer additionally has its own automated suite (34 tests with
+`npm test` in `installer/npm/`) covering install, update confirmation,
+rollback, doctor, and config preservation. It is **not** a test level and it
+proves nothing about AutoCAD — see [`docs/verification.md`](docs/verification.md).
+
 ---
 
 ## Documentation
@@ -281,12 +299,12 @@ Four test levels are defined in [`docs/development.md`](docs/development.md):
 | Document | Contents |
 |----------|----------|
 | [`docs/architecture.md`](docs/architecture.md) | Layers, responsibilities, hard separation rules, state model |
-| [`docs/installation.md`](docs/installation.md) | Prerequisites, manual install, npx plan, uninstall |
+| [`docs/installation.md`](docs/installation.md) | Prerequisites, manual install, npx installer, uninstall |
 | [`docs/configuration.md`](docs/configuration.md) | `opencode.json` wiring, MCP server config, configuration safety |
 | [`docs/development.md`](docs/development.md) | Repo structure, test levels, versioning, change management |
 | [`docs/verification.md`](docs/verification.md) | Verification limits, geometry read-back gate, level status |
 | [`CHANGELOG.md`](CHANGELOG.md) | Released changes, semver classes, compatibility notes |
-| [`installer/npm/README.md`](installer/npm/README.md) | Installer behavior spec (PLANNED) |
+| [`installer/npm/README.md`](installer/npm/README.md) | Installer behavior, options, exit codes, safety rules (IMPLEMENTED) |
 
 Every documented capability is marked **IMPLEMENTED** or **PLANNED**;
 planned functionality is never presented as working.
@@ -301,8 +319,6 @@ Realistic future work only — none of these are implemented yet:
 - Geometry read-back capability, **only if** live testing proves it necessary
   (would be implemented in `autocad-mcp`, not in this skill, and only through
   the five-step gate in `docs/verification.md`)
-- Implementing the `npx autocad-skill` commands per the behavior spec in
-  `installer/npm/README.md`
 - Additional engineering-specific worked examples
 - Broader automated integration tests
 
