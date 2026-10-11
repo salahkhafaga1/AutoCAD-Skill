@@ -58,7 +58,7 @@ cd installer/npm
 npm test
 ```
 
-They use Node's built-in test runner with no dependencies: 91 tests covering
+They use Node's built-in test runner with no dependencies: 105 tests covering
 the default global install target and `--local`, migration from the old
 undiscovered location (copy first, validate, refresh what the user never
 touched, preserve what they did, then confirm before removing), the skill ID

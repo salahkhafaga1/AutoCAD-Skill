@@ -19,9 +19,26 @@ No change is recorded here until it actually exists in the repository.
 
 ## [Unreleased]
 
-Nothing pending yet.
+### Added
 
----
+- Multi-agent installs: new `--agent` flag (`opencode` default,
+  `claude`, `codex`) across install, update, doctor, and refs. The
+  skill directory already follows the Agent Skills open standard, so
+  every host loads the same files — only the install roots differ
+  (`~/.claude/skills` / `.claude/skills`, `~/.agents/skills` /
+  `.agents/skills`). OpenCode-only behavior (config registration,
+  permission rules, migration, slash-command wording) is gated to
+  OpenCode; all hosts share manifests, backups, validation, and
+  reference diagnostics. Manual MCP wiring snippets for Claude Code
+  and Codex in the installer README. 8 new tests; suite now 105.
+
+- Portable reference setup: new `autocad-skill refs` command (read-only
+  status by default; `refs init` scaffolds the empty global or
+  project-local library without ever overwriting), `doctor` reference
+  toolchain checks (scripts present, `pypdf` importable, Tesseract
+  installed — informational when absent), a fresh-machine guide in
+  `docs/references.md`, and a no-absolute-paths rule for skill files
+  enforced by Level 1 validation.
 
 ## [0.3.0] - 2026-10-11
 
@@ -161,7 +178,7 @@ backward-compatible reference capability), the installer moves
   project registration `engineering_agent`. The `/` menu UI was not driven.
 - Level 4 live AutoCAD: **PENDING** — AutoCAD is not installed on this
   machine. **Not tested, not claimed.**
-- Installer suite: **PASS**, 91 tests (22 reference-library + 7 index/pack-guard tests). Packaged-tarball smoke test:
+- Installer suite: **PASS**, 105 tests (22 reference-library + 7 index/pack-guard + 6 refs-command/toolchain + 8 multi-agent tests). Packaged-tarball smoke test:
   **PASS**, 49 checks. `npm pack --dry-run`: 57 files, 79.1 kB. Packaged skill
   byte-identical to the repository source (38/38 SHA-256). Secret audit:
   **CLEAN** (118 files, 0 pattern hits, 0 banned names).

@@ -175,7 +175,7 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 - **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
   production-ready live AutoCAD testing. AutoCAD is not installed on the
   development machine; live end-to-end testing remains a separate step.
-- **Installer tests: PASS** — 91 automated tests of the npm CLI (default
+- **Installer tests: PASS** — 105 automated tests of the npm CLI (default
   global target, `--local`, migration and its safety rules, skill ID and
   frontmatter discovery requirements, dry-run, config preservation,
   local-modification detection, update confirmation, rollback, doctor —
@@ -305,7 +305,7 @@ Four test levels are defined in [`docs/development.md`](docs/development.md):
 - **Level 4 — Live AutoCAD**: real drawing operations end to end.
   **PENDING — not claimed.**
 
-The npm installer additionally has its own automated suite (91 tests with
+The npm installer additionally has its own automated suite (105 tests with
 `npm test` in `installer/npm/`) covering install, migration, update
 confirmation, rollback, doctor — including reference-library and
 packaging-guard checks —

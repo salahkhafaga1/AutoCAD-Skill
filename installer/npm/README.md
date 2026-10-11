@@ -207,7 +207,9 @@ permission, skill integrity, local modifications, update availability, the
 OpenCode configuration, the autocad-mcp entry, the reference library
 (global and project-local manifests, missing files, duplicate or conflicting
 ids — warnings at most, never errors), reference index states (fresh,
-stale, not built, orphaned — warnings at most), Python, and AutoCAD.
+stale, not built, orphaned — warnings at most), the reference toolchain
+(scripts present, `pypdf` importable, Tesseract installed — informational
+when absent, never errors), Python, and AutoCAD.
 
 ```
 ✓ Skill ID engineering-cad (OpenCode slash command /engineering-cad)
@@ -229,6 +231,80 @@ are warnings, because neither blocks the skill from working.
 
 Setting up a reference library, indexing, and searching are documented in
 `docs/references.md` in the repository.
+
+## refs
+
+```text
+npx autocad-skill refs
+npx autocad-skill refs init [--local] [--project <dir>] [--dry-run]
+```
+
+Bare `refs` is read-only: it prints the global and project library
+roots, whether their manifests exist, and which scope is active. `refs
+init` scaffolds the empty library for the active scope (global by
+default, like `install`): it creates the directory and an empty
+`references.json` and prints the next steps. An existing manifest —
+valid or corrupt — is left untouched, and `--dry-run` changes nothing.
+Exit codes follow the usual convention: 0 success, 1 error.
+
+## Other agents (Claude Code, Codex)
+
+The installed skill directory follows the Agent Skills open standard
+(`SKILL.md` with `name`/`description`), so any host that discovers
+`<root>/engineering-cad/SKILL.md` loads the same files. Only the roots
+differ — select the host with `--agent` (default `opencode`):
+
+```text
+npx autocad-skill install --agent claude   # ~/.claude/skills/engineering-cad, or <project>/.claude/skills with --local
+npx autocad-skill install --agent codex    # ~/.agents/skills/engineering-cad, or <project>/.agents/skills with --local
+npx autocad-skill doctor --agent claude    # discovery verdicts for that host
+```
+
+`update`, `rollback`, `doctor`, and `refs` accept `--agent` the same
+way. OpenCode-only concepts (opencode.json registration, skill
+permission rules, `doctor`'s OpenCode rows) are skipped for other
+hosts; everything else — manifests, backups, validation, reference
+diagnostics — behaves identically.
+
+The frontmatter intentionally keeps two non-standard keys (`slash`,
+`requires_mcp`): OpenCode and its installer tests rely on the first,
+and Claude Code silently ignores unknown keys. Only the six
+spec-defined fields are guaranteed on strict hosts (claude.ai upload
+and API packaging are therefore unsupported — use local-folder
+installs).
+
+The MCP server is wired per host, by hand for now (the installer never
+edits foreign configs). Claude Code (`.mcp.json` in the project root
+or `~/.claude.json` scope of your choice):
+
+```json
+{
+  "mcpServers": {
+    "autocad-mcp": {
+      "command": "C:\\path\\to\\autocad-mcp\\.venv\\Scripts\\autocad-mcp.exe",
+      "cwd": "C:\\path\\to\\autocad-mcp",
+      "env": { "ACAD_MCP_OUTPUT_ROOT": "C:\\Users\\you\\Documents\\autocad-mcp" }
+    }
+  }
+}
+```
+
+Codex (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.autocad-mcp]
+command = "C:\\path\\to\\autocad-mcp\\.venv\\Scripts\\autocad-mcp.exe"
+cwd = "C:\\path\\to\\autocad-mcp"
+startup_timeout_sec = 30
+```
+
+```toml
+[mcp_servers.autocad-mcp.env]
+ACAD_MCP_OUTPUT_ROOT = "C:\\Users\\you\\Documents\\autocad-mcp"
+```
+
+Replace the paths with your machine's. Verify with the host's own MCP
+listing before relying on the tools.
 
 ## version
 
@@ -256,9 +332,9 @@ copy differs from the available one.
 
 - Zero dependencies, no build step. Entry point: `bin/autocad-skill.js`.
 - Layout: `bin/` (argument parsing and dispatch), `lib/` (helpers, migration,
-  and the four commands), `scripts/prepack.js` (packaging), `test/`
+  and the five commands), `scripts/prepack.js` (packaging), `test/`
   (node:test suite).
-- Tests: `npm test` — 91 tests covering install detection, the default global
+- Tests: `npm test` — 105 tests covering install detection, the default global
   target, `--local`, migration and its safety rules (refresh, preservation of
   user edits/added files, refusal of an invalid old copy), skill id/discovery
   frontmatter requirements, dry-run, config preservation, local-modification
