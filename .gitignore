@@ -5,6 +5,7 @@
 build/
 dist/
 .venv/
+.venv-ref/
 venv/
 env/
 
@@ -45,3 +46,8 @@ installer/npm/CHANGELOG.md
 screenshots/
 checkpoints/
 projects/
+
+# Local engineering reference artifacts (user libraries and generated
+# indexes live outside the repo and must never be committed)
+references.json
+.index/
