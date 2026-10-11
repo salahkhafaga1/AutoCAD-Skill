@@ -10,7 +10,7 @@ follows [Semantic Versioning](https://semver.org/):
 - **MAJOR** — breaking behavioral or structural changes.
 
 The npm package (`installer/npm/package.json`) is versioned separately from
-the skill: 0.2.0 is the skill, 0.3.0 is the installer, and the tool contract
+the skill: 0.2.0 is the skill, 0.4.0 is the installer, and the tool contract
 version is 1. A package-only release does not change the skill version.
 
 No change is recorded here until it actually exists in the repository.
@@ -19,19 +19,42 @@ No change is recorded here until it actually exists in the repository.
 
 ## [Unreleased]
 
+Nothing pending yet.
+
+---
+
+## [0.4.0] - 2026-10-12
+
+Installer release (skill stays 0.2.0, contract stays 1): interactive
+install setup, MCP-coverage doctor lines, slash-claim corrections, and
+the test suite at 119.
+
 ### Added
 
+- Interactive install setup: on a terminal without `--agent` / scope
+  flags, `install` asks which agent host and which scope (detected
+  hosts listed first), and afterwards offers to wire the
+  `autocad-mcp` server into the matching OpenCode config (verified
+  entry point, backup before writing, never overwrites a differing
+  entry — prints the manual snippet instead). Flags, `--yes`, and
+  non-interactive runs keep the previous defaults silently. 11 new
+  tests; suite now 119.
+- `doctor` now reports MCP server coverage across project and global
+  configs (configured where, command path verified to exist), warning —
+  never erroring — when the server is nowhere wired or its command is
+  missing. This is the exact failure behind every "agent sees no
+  autocad tools" report; the installer README gains a matching
+  step-by-step troubleshooting section.
 - Multi-agent installs: new `--agent` flag (`opencode` default,
   `claude`, `codex`) across install, update, doctor, and refs. The
   skill directory already follows the Agent Skills open standard, so
   every host loads the same files — only the install roots differ
   (`~/.claude/skills` / `.claude/skills`, `~/.agents/skills` /
   `.agents/skills`). OpenCode-only behavior (config registration,
-  permission rules, migration, slash-command wording) is gated to
+  permission rules, migration, mention-handle wording) is gated to
   OpenCode; all hosts share manifests, backups, validation, and
   reference diagnostics. Manual MCP wiring snippets for Claude Code
-  and Codex in the installer README. 8 new tests; suite now 105.
-
+  and Codex in the installer README. 8 new tests.
 - Portable reference setup: new `autocad-skill refs` command (read-only
   status by default; `refs init` scaffolds the empty global or
   project-local library without ever overwriting), `doctor` reference
@@ -39,6 +62,19 @@ No change is recorded here until it actually exists in the repository.
   installed — informational when absent), a fresh-machine guide in
   `docs/references.md`, and a no-absolute-paths rule for skill files
   enforced by Level 1 validation.
+
+### Fixed
+
+- Corrected the slash-command claims across the skill, installer output,
+  tests, and docs: OpenCode skills load via `@engineering-cad` mentions
+  or automatically for matching tasks — they never appear in the `/`
+  menu on their own (that list shows commands). Removed the fictional
+  `slash: true` frontmatter field, reworded the install/doctor Skill ID
+  lines plus next-steps guidance, and documented the optional companion
+  command file (`~/.config/opencode/commands/engineering-cad.md`) that
+  provides a literal `/engineering-cad` entry. No behavior besides
+  messaging changed; default install, discovery, and validation are
+  untouched.
 
 ## [0.3.0] - 2026-10-11
 
@@ -140,7 +176,7 @@ backward-compatible reference capability), the installer moves
   still treats them as the user's and still asks first. A copy with no install
   manifest is carried over completely unchanged, with a pointer to `update`.
 - `--local` flag; `--project <dir>` now implies project scope.
-- `doctor` checks for the skill ID and its slash command, whether the install
+- `doctor` checks for the skill ID and its mention handle, whether the install
   target is a documented discovery source, leftover installations at old
   locations (warning), and any `permission` rule whose `skill` action would
   `deny` (error) or `ask` (warn) the skill.
@@ -178,7 +214,7 @@ backward-compatible reference capability), the installer moves
   project registration `engineering_agent`. The `/` menu UI was not driven.
 - Level 4 live AutoCAD: **PENDING** — AutoCAD is not installed on this
   machine. **Not tested, not claimed.**
-- Installer suite: **PASS**, 105 tests (22 reference-library + 7 index/pack-guard + 6 refs-command/toolchain + 8 multi-agent tests). Packaged-tarball smoke test:
+- Installer suite: **PASS**, 119 tests (22 reference-library + 7 index/pack-guard + 6 refs-command/toolchain + 8 multi-agent + 3 MCP-coverage + 11 interactive-setup tests). Packaged-tarball smoke test:
   **PASS**, 49 checks. `npm pack --dry-run`: 57 files, 79.1 kB. Packaged skill
   byte-identical to the repository source (38/38 SHA-256). Secret audit:
   **CLEAN** (118 files, 0 pattern hits, 0 banned names).

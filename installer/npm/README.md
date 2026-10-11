@@ -71,10 +71,13 @@ Two rules follow from that table, and both are load-bearing:
    including the home directory, which sits *above* the project root and is
    therefore never searched for project sources.
 2. **The skill id is the directory name.** The folder is installed as
-   `engineering-cad`, so the id — and the TUI slash command — is
-   `/engineering-cad`. `SKILL.md`'s frontmatter `name: engineering-cad` carries
-   the same value so the display label and the id agree, and `slash: true` keeps
-   the skill exposed as a slash command.
+   `engineering-cad`, so the skill id is `engineering-cad`.
+   `SKILL.md`'s frontmatter `name: engineering-cad` carries
+   the same value so the display label and the id agree. Skills are
+   invoked by mentioning `@engineering-cad` in a prompt (or letting
+   the model load the skill for a matching task) — they never appear
+   in the `/` menu on their own; `/` commands come from separate
+   `commands/` files (see the installer README's companion-command note).
 
 > A previous release installed to `<home>/.opencode/skills/engineering_agent/`.
 > That path is not a discovery source in either scope, so OpenCode never saw the
@@ -83,17 +86,26 @@ Two rules follow from that table, and both are load-bearing:
 ## install
 
 1. Detects the OS, the OpenCode project root, and the skill directory.
-2. Resolves the skill source: `AUTOCAD_SKILL_SOURCE` → the packaged copy → the
+2. On an interactive terminal without `--agent` / scope flags, asks which
+   agent host and which scope (global vs project). Flags, `--yes`, and
+   non-interactive runs keep the defaults (OpenCode, global) silently.
+3. Resolves the skill source: `AUTOCAD_SKILL_SOURCE` → the packaged copy → the
    repository checkout.
-3. Installs to `~/.config/opencode/skills/engineering-cad/` by default — the
+4. Installs to `~/.config/opencode/skills/engineering-cad/` by default — the
    documented global source OpenCode discovers automatically. `--local` /
    `--project <dir>` install to `<project>/.opencode/skills/engineering-cad/`.
-4. **Migrates** an installation left at an old location (see below).
-5. Writes `.autocad-skill-manifest.json` — the SHA-256 of every file as the
+   Use `--agent claude|codex` for another host's roots.
+5. **Migrates** an installation left at an old location (see below).
+6. Writes `.autocad-skill-manifest.json` — the SHA-256 of every file as the
    installer wrote it. This is what later distinguishes *your* edits from the
    shipped content.
-6. Validates the result: required files, `SKILL.md` frontmatter, `skill.json`
+7. Validates the result: required files, `SKILL.md` frontmatter, `skill.json`
    identity, every manifest hash.
+8. Offers to wire the `autocad-mcp` server into the matching OpenCode
+   config (interactive OpenCode installs only): asks for the server
+   checkout path, verifies the entry point, backs up, then writes.
+   An existing differing entry is never overwritten — the manual
+   snippet is printed instead.
 
 **Configuration safety.** The default install writes no configuration at all —
 auto-discovery already covers both the global skills folder and
@@ -201,7 +213,7 @@ reported. Confirmed before applying unless `--yes`.
 ## doctor
 
 Read-only. Checks Node.js, npm, OpenCode, the installed skill, the skill id
-and its slash command, whether the install target is a documented OpenCode
+and how to invoke it, whether the install target is a documented OpenCode
 discovery source, leftover installations at old locations, the `skill`
 permission, skill integrity, local modifications, update availability, the
 OpenCode configuration, the autocad-mcp entry, the reference library
@@ -212,7 +224,7 @@ stale, not built, orphaned — warnings at most), the reference toolchain
 when absent, never errors), Python, and AutoCAD.
 
 ```
-✓ Skill ID engineering-cad (OpenCode slash command /engineering-cad)
+✓ Skill ID engineering-cad (mention @engineering-cad in a prompt, or ask a CAD task)
 ✓ Skill discovery C:\Users\me\.config\opencode\skills\engineering-cad is a documented OpenCode source
 ✓ Legacy install none
 ✓ skill permission allowed by OpenCode's default policy
@@ -222,12 +234,37 @@ Result: no errors.
 ```
 
 Exits `1` only when at least one check reports **ERROR** — which now includes a
-`permissions` rule that would `deny` the skill (it would be invisible in the
-`/` menu) and an install target outside every documented source. Warnings and
+`permissions` rule that would `deny` the skill (it would stay hidden from the
+model) and an install target outside every documented source. Warnings and
 "not detected" never fail the run: a leftover old copy and an absent AutoCAD
 are warnings, because neither blocks the skill from working.
 
 `doctor` writes nothing: it does not create, modify, or delete any file.
+
+### Companion slash command (optional)
+
+Skills load via `@engineering-cad` mentions or automatically for matching
+tasks — they never appear in the `/` menu by themselves. If you want a
+literal `/engineering-cad` entry, create one command file (user config,
+not part of the package):
+
+```text
+~/.config/opencode/commands/engineering-cad.md
+```
+
+```md
+---
+description: Engineering CAD work with AutoCAD (loads the engineering-cad skill)
+---
+
+Load the engineering-cad skill and use it to handle this request. If AutoCAD
+is not running with a drawing open, say so first instead of guessing.
+
+Request:
+$ARGUMENTS
+```
+
+OpenCode picks command files up automatically; no restart is needed.
 
 Setting up a reference library, indexing, and searching are documented in
 `docs/references.md` in the repository.
@@ -313,7 +350,7 @@ Prints exactly:
 ```
 Engineering CAD Agent
 Skill version: 0.2.0
-Installer version: 0.3.0
+Installer version: 0.4.0
 Tool Contract version: 1
 ```
 
@@ -328,13 +365,41 @@ copy differs from the available one.
 - It does not claim live behavior. Live verification is Level 4 and is
   **PENDING** — see `docs/verification.md`.
 
+## Troubleshooting: agent sees no autocad tools
+
+The skill loads fine but the model reports no `autocad_*` tools. Work
+through this list top to bottom — the first hit is the fix in nearly
+every case:
+
+1. **Wrong config scope (most common).** OpenCode reads the MCP config
+   of the project the session runs in — a server wired into another
+   project's `opencode.json` is invisible. Run `npx autocad-skill
+   doctor` from the project directory and read the `autocad-mcp` line:
+   it names exactly where the server is configured (`project`,
+   `global`, or neither).
+2. **Nowhere configured.** Add the server once, globally, so every
+   project sees it — or per project if you prefer. With the OpenCode
+   CLI: `opencode mcp add autocad-mcp --global -- <path-to-venv>/autocad-mcp.exe`.
+   Without it, add the same `mcp.servers.autocad-mcp` block by hand to
+   the global `opencode.json` (beside `skills/` roots, same shape as
+   `opencode.example.json`; paths use doubled backslashes in JSON).
+3. **Stale session.** MCP servers start with the session — a server
+   added mid-session never appears until you close and reopen OpenCode
+   in the project directory.
+4. **Broken command path.** `doctor` verifies the configured executable
+   exists and warns when it does not (moved checkout, deleted venv).
+   Reinstall the server venv or fix the path.
+5. **AutoCAD not running.** Separate from wiring: open AutoCAD and a
+   drawing yourself — the skill is forbidden from starting it. Then ask
+   the agent to list the available autocad tools; all 29 should appear.
+
 ## Development
 
 - Zero dependencies, no build step. Entry point: `bin/autocad-skill.js`.
 - Layout: `bin/` (argument parsing and dispatch), `lib/` (helpers, migration,
   and the five commands), `scripts/prepack.js` (packaging), `test/`
   (node:test suite).
-- Tests: `npm test` — 105 tests covering install detection, the default global
+- Tests: `npm test` — 119 tests covering install detection, the default global
   target, `--local`, migration and its safety rules (refresh, preservation of
   user edits/added files, refusal of an invalid old copy), skill id/discovery
   frontmatter requirements, dry-run, config preservation, local-modification

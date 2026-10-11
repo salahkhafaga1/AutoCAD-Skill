@@ -106,13 +106,14 @@ installer enforces them in code:
 - Skill not listed: run `npx autocad-skill doctor` — it reports the skill ID,
   the expected install path, whether that path is one of OpenCode's documented
   discovery sources, any leftover copy at an old location, and any `skill`
-  permission rule that would hide it. Expected: `engineering-cad`, offered as
-  `/engineering-cad`.
+  permission rule that would hide it. Expected: `engineering-cad`, loadable
+  as `@engineering-cad` (skills do not appear in the `/` menu — that list
+  shows commands, which live in `commands/` files, not skills).
 - Wiring it by hand: check the `skills` path (working-directory-relative),
   that the folder contains `<skill-dir>/SKILL.md`, and that the file name is
   exactly `SKILL.md` with `name` and `description` in frontmatter. Remember
   the directory name sets the ID — copy it to `.opencode/skills/engineering-cad/`
-  to get `/engineering-cad`.
+  and mention `@engineering-cad` in a prompt to confirm it loads.
 - MCP server not connected: verify the venv entry point exists and
   `ACAD_MCP_OUTPUT_ROOT` is writable; check OpenCode's MCP server log.
 - Validator disagreements: run `python tests/validate_skill.py` — it

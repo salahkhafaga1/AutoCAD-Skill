@@ -40,7 +40,7 @@ yet built (see `installer/npm/README.md`).
    Alternative (project `.opencode` folder): copy the
    `skill/engineering_agent/` folder to
    `.opencode/skills/engineering-cad/` — discovered automatically, with the ID
-   `engineering-cad` and the slash command `/engineering-cad`. Use `npx
+   `engineering-cad`, invocable as `@engineering-cad`. Use `npx
    autocad-skill` instead if you want the same ID as the published package;
    it installs into `~/.config/opencode/skills/engineering-cad/` and migrates
    this manual copy if one exists at an older location.
@@ -59,7 +59,7 @@ yet built (see `installer/npm/README.md`).
    findable above the skill folder; otherwise the validator runs in a clearly
    reported degraded mode.
 
-## Install via npx — IMPLEMENTED (installer 0.3.0; reference tools ship since 0.3.0)
+## Install via npx — IMPLEMENTED (installer 0.4.0; reference tools ship since 0.3.0)
 
 ```
 npx autocad-skill install
@@ -78,8 +78,11 @@ Its behavior is documented in `installer/npm/README.md`; the important points:
   explicit opt-in that confirms first, backs the config up, and appends one
   path. Use `--local` (or `--project <dir>`) to install into
   `<project>/.opencode/skills/engineering-cad/` instead.
-- The skill is registered under the ID **`engineering-cad`**, so OpenCode
-  exposes it as **`/engineering-cad`**.
+- The skill is registered under the ID **`engineering-cad`** — mention
+  `@engineering-cad` in a prompt, or ask a CAD task and let the model load
+  it. (For a literal `/engineering-cad` menu entry, add the optional
+  companion command file documented in `installer/npm/README.md` — skills
+  never appear in the `/` menu on their own.)
 - An installation left at an old, undiscovered location
   (`~/.opencode/skills/engineering_agent/`) is migrated automatically: the
   copy is validated first, files the old installer wrote and you never edited

@@ -58,7 +58,7 @@ cd installer/npm
 npm test
 ```
 
-They use Node's built-in test runner with no dependencies: 105 tests covering
+They use Node's built-in test runner with no dependencies: 119 tests covering
 the default global install target and `--local`, migration from the old
 undiscovered location (copy first, validate, refresh what the user never
 touched, preserve what they did, then confirm before removing), the skill ID
@@ -104,7 +104,7 @@ records every released change.
 
 The npm package carries its own, separate version in
 `installer/npm/package.json`. It does not move together with the skill: the
-skill is 0.2.0, the installer is 0.3.0, and the tool contract version is 1.
+skill is 0.2.0, the installer is 0.4.0, and the tool contract version is 1.
 `autocad-skill version` prints all three.
 
 Update policy — now enforced in code by the installer rather than by

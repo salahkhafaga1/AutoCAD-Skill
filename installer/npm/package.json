@@ -1,6 +1,6 @@
 {
   "name": "autocad-skill",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Installer, updater, and doctor for the Engineering CAD Agent Skill (OpenCode). Copies plain Markdown/JSON skill files into place; never bundles autocad-mcp.",
   "license": "MIT",
   "repository": {

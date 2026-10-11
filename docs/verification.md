@@ -61,7 +61,7 @@ it proves nothing about AutoCAD or about skill behavior at run time.
 
 | Suite | Scope | Status (2026-10-08) |
 |-------|-------|---------------------|
-| Installer tests | CLI behavior of install, migration, update, rollback, doctor, refs, version | **PASS** — 105 tests, run with `npm test` in `installer/npm/`, zero dependencies |
+| Installer tests | CLI behavior of install, migration, update, rollback, doctor, refs, version | **PASS** — 119 tests, run with `npm test` in `installer/npm/`, zero dependencies |
 | OpenCode discovery checks | Install target, skill ID, frontmatter, `skill` permission | **PASS (structural)** — automated inside the installer suite; verifies OpenCode V2's documented source paths, the `engineering-cad` ID, `name`/`description`/`slash` frontmatter, and the absence of a hiding `permissions` rule |
 | Packaged-tarball smoke test | What a user actually downloads from npm | **PASS** — 49 checks via `node scripts/smoke.js` after `npm pack`: installs the tarball offline into a throwaway prefix, runs the installed binary, and verifies target, ID, frontmatter, migration refresh, and refusal of an invalid old install |
 | Package contents audit | What `npm publish` would upload | **PASS** — `npm pack --dry-run`: 67 files, 104.7 kB; `test/` and `scripts/` excluded; reference tools ship (`tools/*.py`, no bytecode); no PDF, index, manifest, or venv paths in the file list; packaged skill byte-identical to the repository source (38/38 SHA-256); `tests/secret_audit.py` **CLEAN** (134 files, 0 pattern hits, 0 banned names) |

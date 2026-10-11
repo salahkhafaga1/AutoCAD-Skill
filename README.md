@@ -11,7 +11,7 @@ This skill is a **reasoning and workflow layer**. It does not talk to AutoCAD
 directly and it does **not** replace the MCP tool layer — it drives a fixed,
 scoped set of MCP tools with engineering discipline.
 
-**Current version:** skill 0.2.0, installer 0.3.0 (see `CHANGELOG.md`) · **Docs:** [`docs/`](docs/)
+**Current version:** skill 0.2.0, installer 0.4.0 (see `CHANGELOG.md`) · **Docs:** [`docs/`](docs/)
 
 ---
 
@@ -175,7 +175,7 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 - **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
   production-ready live AutoCAD testing. AutoCAD is not installed on the
   development machine; live end-to-end testing remains a separate step.
-- **Installer tests: PASS** — 105 automated tests of the npm CLI (default
+- **Installer tests: PASS** — 119 automated tests of the npm CLI (default
   global target, `--local`, migration and its safety rules, skill ID and
   frontmatter discovery requirements, dry-run, config preservation,
   local-modification detection, update confirmation, rollback, doctor —
@@ -187,9 +187,10 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 - **OpenCode skill discovery: structural checks PASS, live TUI PENDING** —
   the installer tests verify the install target is one of OpenCode V2's
   documented discovery sources, that the skill ID is `engineering-cad`, and
-  that nothing in the frontmatter hides the skill. The `/engineering-cad`
-  entry has **not** been observed in a running TUI on this machine (no
-  OpenCode CLI available here) — see `docs/verification.md`.
+  that nothing in the frontmatter hides the skill. Skills load via
+  `@engineering-cad` mentions or automatically for matching tasks (they
+  never appear in the `/` menu on their own — that list shows commands)
+  — see `docs/verification.md`.
 
 ---
 
@@ -236,7 +237,11 @@ Pick any one — all of them deliver the same published package
    writes no configuration at all — then register the MCP server below. Use
    `--local` for a project-local copy at
    `<project>/.opencode/skills/engineering-cad/`. The skill is registered as
-   **`engineering-cad`**, so OpenCode offers **`/engineering-cad`**.
+   **`engineering-cad`** — mention `@engineering-cad` in a prompt, or ask
+   a CAD task and let the model load it. (A literal `/engineering-cad`
+   menu entry needs the optional companion command file documented in
+   [`installer/npm/README.md`](installer/npm/README.md) — skills never
+   appear in the `/` menu on their own.)
 
    Prefer to wire it yourself? Add the skill folder to the `skills` array in
    your project's `opencode.json`:
@@ -326,7 +331,7 @@ Four test levels are defined in [`docs/development.md`](docs/development.md):
 - **Level 4 — Live AutoCAD**: real drawing operations end to end.
   **PENDING — not claimed.**
 
-The npm installer additionally has its own automated suite (105 tests with
+The npm installer additionally has its own automated suite (119 tests with
 `npm test` in `installer/npm/`) covering install, migration, update
 confirmation, rollback, doctor — including reference-library and
 packaging-guard checks —
