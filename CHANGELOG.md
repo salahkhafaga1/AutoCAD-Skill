@@ -52,6 +52,59 @@ can be published. See `docs/development.md` for the release steps.
 
 ### Added
 
+- Reference lookup inside CAD workflows (P1): new
+  `skill/engineering_agent/rules/reference_rules.md` (when/how to
+  search, degradation without invention, excerpt/interpretation
+  separation, prohibitions on compliance verdicts and handbook-as-code),
+  an UNDERSTAND-loop hook plus references entry in `SKILL.md`,
+  citation-aware requirement extraction (Steps 1/3/6 with an Evidence
+  block), optional `citation` objects on decision/assumption/constraint
+  schemas and templates (all existing files stay valid), and a cited
+  REQ-006 with evidence block in the simple_room example. Risk, stop,
+  verification, MCP-contract, installer, and version behavior unchanged
+  by design. Level 1 PASS, secret audit CLEAN, installer suite 91/91.
+
+- Reference search and validation hardening (P0.3/P0.4):
+  `tools/ref_search.py` (local keyword search over page indexes,
+  stdlib-only, method/confidence labels, explicit no-match reporting),
+  outline-section capture in `tools/ref_extract.py` (additive, old
+  indexes stay valid), `tests/test_ref_search.py` (15 tests),
+  `installer/npm/lib/packcheck.js` (reference content fails the pack,
+  historical entries stay warn-only), `doctor` reference-index states
+  (fresh/stale/not-built/orphaned, warnings at most), a references
+  module in `tests/validate_skill.py` (fixture schema, no committed
+  `.index/`, skill-only hygiene patterns), `docs/references.md` user
+  guide, and 7 new installer tests (packaging guard, index states).
+  Installer suite now 91 tests, all passing; secret audit CLEAN.
+
+- Reference ingestion and extraction (P0.2): `tools/ref_inspect.py`
+  (Tier-0 stdlib structural inspection), `tools/ref_extract.py`
+  (Tier-1 per-page text extraction, `pypdf==6.20.0` in the opt-in
+  `.venv-ref`, pinned in `tools/requirements-ref.txt`), and
+  `tests/test_ref_tools.py` (20 tests on hand-built synthetic PDFs:
+  text/mixed/image/empty/corrupt/encrypted/partial, path containment,
+  incremental rebuild). Local-only runs: ECP203 445 image pages,
+  Neufert 640 pages (638 mixed, legacy OCR, no ToUnicode maps),
+  Time-Saver 1297 pages (1240 mixed, 143 encoding-suspect) — zero
+  failed pages, no OCR performed. `.venv-ref/` gitignored;
+  `secret_audit.py` skip list extended to `.venv-ref` (audit CLEAN).
+
+- Reference library foundation (P0.1): `installer/npm/lib/references.js`
+  defines the `references.json` manifest schema (stable kebab-case ids,
+  required local paths, optional title/author/edition/year/jurisdiction/
+  document category with `code` distinguished from `standard`, `handbook`,
+  `manufacturer`, `educational`, and `other`), discovers the global
+  (`<home>/.config/autocad-skill/references`, honoring
+  `AUTOCAD_SKILL_HOME`/`XDG_CONFIG_HOME` like every other global path) and
+  project-local (`.opencode/references`) libraries, resolves paths safely
+  (relative paths must stay inside the root; absolute paths are allowed but
+  flagged external so existing collections are registered without moving
+  them), and reports missing files, invalid metadata, duplicate ids, and
+  global/project conflicts — never resolving conflicts silently.
+  `doctor` gains a read-only Reference library section (missing/empty/
+  invalid libraries are warnings at most, never errors). 22 new tests;
+  installer suite now 84 tests, all passing.
+
 - Migration of installations at old, undiscovered locations: the copy is made
   and validated first, and the old directory is removed only after an explicit
   confirmation defaulting to **[y/N] = N** (or `--yes`). Without a terminal the
@@ -102,7 +155,7 @@ can be published. See `docs/development.md` for the release steps.
   project registration `engineering_agent`. The `/` menu UI was not driven.
 - Level 4 live AutoCAD: **PENDING** — AutoCAD is not installed on this
   machine. **Not tested, not claimed.**
-- Installer suite: **PASS**, 61 tests. Packaged-tarball smoke test:
+- Installer suite: **PASS**, 91 tests (22 reference-library + 7 index/pack-guard tests). Packaged-tarball smoke test:
   **PASS**, 49 checks. `npm pack --dry-run`: 57 files, 79.1 kB. Packaged skill
   byte-identical to the repository source (38/38 SHA-256). Secret audit:
   **CLEAN** (118 files, 0 pattern hits, 0 banned names).

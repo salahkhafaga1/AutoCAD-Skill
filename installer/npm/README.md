@@ -204,7 +204,10 @@ Read-only. Checks Node.js, npm, OpenCode, the installed skill, the skill id
 and its slash command, whether the install target is a documented OpenCode
 discovery source, leftover installations at old locations, the `skill`
 permission, skill integrity, local modifications, update availability, the
-OpenCode configuration, the autocad-mcp entry, Python, and AutoCAD.
+OpenCode configuration, the autocad-mcp entry, the reference library
+(global and project-local manifests, missing files, duplicate or conflicting
+ids — warnings at most, never errors), reference index states (fresh,
+stale, not built, orphaned — warnings at most), Python, and AutoCAD.
 
 ```
 ✓ Skill ID engineering-cad (OpenCode slash command /engineering-cad)
@@ -223,6 +226,9 @@ Exits `1` only when at least one check reports **ERROR** — which now includes 
 are warnings, because neither blocks the skill from working.
 
 `doctor` writes nothing: it does not create, modify, or delete any file.
+
+Setting up a reference library, indexing, and searching are documented in
+`docs/references.md` in the repository.
 
 ## version
 
@@ -252,7 +258,7 @@ copy differs from the available one.
 - Layout: `bin/` (argument parsing and dispatch), `lib/` (helpers, migration,
   and the four commands), `scripts/prepack.js` (packaging), `test/`
   (node:test suite).
-- Tests: `npm test` — 61 tests covering install detection, the default global
+- Tests: `npm test` — 91 tests covering install detection, the default global
   target, `--local`, migration and its safety rules (refresh, preservation of
   user edits/added files, refusal of an invalid old copy), skill id/discovery
   frontmatter requirements, dry-run, config preservation, local-modification

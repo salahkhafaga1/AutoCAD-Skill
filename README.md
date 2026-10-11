@@ -175,11 +175,13 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 - **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
   production-ready live AutoCAD testing. AutoCAD is not installed on the
   development machine; live end-to-end testing remains a separate step.
-- **Installer tests: PASS** — 53 automated tests of the npm CLI (default
+- **Installer tests: PASS** — 91 automated tests of the npm CLI (default
   global target, `--local`, migration and its safety rules, skill ID and
   frontmatter discovery requirements, dry-run, config preservation,
   local-modification detection, update confirmation, rollback, doctor —
-  including the `skill` permission — and invalid environments). Every test
+  including the `skill` permission — reference-library manifest,
+  discovery, index-state, and packaging-guard checks, and invalid
+  environments). Every test
   runs in a throwaway temp directory with its own `AUTOCAD_SKILL_HOME`; no
   test writes into the repository or into a real OpenCode skills folder.
 - **OpenCode skill discovery: structural checks PASS, live TUI PENDING** —
@@ -303,9 +305,11 @@ Four test levels are defined in [`docs/development.md`](docs/development.md):
 - **Level 4 — Live AutoCAD**: real drawing operations end to end.
   **PENDING — not claimed.**
 
-The npm installer additionally has its own automated suite (34 tests with
-`npm test` in `installer/npm/`) covering install, update confirmation,
-rollback, doctor, and config preservation. It is **not** a test level and it
+The npm installer additionally has its own automated suite (91 tests with
+`npm test` in `installer/npm/`) covering install, migration, update
+confirmation, rollback, doctor — including reference-library and
+packaging-guard checks —
+and config preservation. It is **not** a test level and it
 proves nothing about AutoCAD — see [`docs/verification.md`](docs/verification.md).
 
 ---
