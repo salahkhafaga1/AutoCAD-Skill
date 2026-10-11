@@ -96,5 +96,5 @@ test("default behavior is unchanged (OpenCode)", (t) => {
 
   const r = runCli(["install", "--project", project], { env: { AUTOCAD_SKILL_HOME: home } });
   assert.strictEqual(r.status, 0, r.output);
-  assert.match(r.stdout, /OpenCode slash command/);
+  assert.match(r.stdout, /mention @engineering-cad/);
 });
