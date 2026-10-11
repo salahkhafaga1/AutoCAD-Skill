@@ -209,6 +209,9 @@ def main():
         "ref_sea" + "rch(",
         ".ind" + "ex/",
     ]
+    # Absolute machine paths must never appear in skill files: portability
+    # requires placeholders or runtime-discovered roots only.
+    ABS_PATH_SKILL = re.compile(r"[A-Za-z]:\\")
     for md in md_files:
         text = md.read_text(encoding="utf-8")
         for pattern in FORBIDDEN_SKILL:
@@ -216,6 +219,9 @@ def main():
             if count:
                 forbidden_hits.append(f"{md.name}: `{pattern}` x{count}")
                 violations.extend(f"{md.name}: forbidden skill pattern `{pattern}`" for _ in range(count))
+        for match in ABS_PATH_SKILL.findall(text):
+            forbidden_hits.append(f"{md.name}: absolute Windows path `{match}...`")
+            violations.append(f"{md.name}: absolute machine path in skill file")
 
     # --- 5. Reference fixtures & committed-index guard -----------------------
     # Synthetic manifest fixtures (if any) must satisfy the registry schema;

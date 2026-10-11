@@ -292,6 +292,57 @@ function detectAutoCAD() {
   return { detected: candidates.length > 0, path: candidates[0] || null };
 }
 
+/* --------------------------------------- reference toolchain -------- */
+
+/**
+ * Locate the reference-tool scripts (P0.2/P0.3/Track C tools).
+ *
+ * Installed layout keeps them at <package>/tools; a repository checkout
+ * keeps them at <repo>/tools. Both are probed read-only; the first
+ * directory that exists wins. Individual scripts are reported so a
+ * partial copy is visible instead of silently half-working.
+ */
+const REF_TOOL_SCRIPTS = ["ref_inspect.py", "ref_extract.py", "ref_search.py", "ref_ocr.py"];
+
+function detectRefTools() {
+  const candidates = [
+    path.join(__dirname, "..", "tools"),
+    path.join(__dirname, "..", "..", "tools"),
+  ];
+  const toolsDir = candidates.find((d) => isDir(d)) || null;
+  const scripts = REF_TOOL_SCRIPTS.map((name) => ({
+    name,
+    present: toolsDir ? isFile(path.join(toolsDir, name)) : false,
+  }));
+  return { toolsDir, scripts };
+}
+
+/** pypdf import probe for Tier-1 extraction (read-only, short timeout). */
+function detectPypdf() {
+  const py = detectPython();
+  if (!py.detected) return { present: false, version: null };
+  let res;
+  try {
+    res = spawnSync(py.cmd, ["-c", "import pypdf; print(pypdf.__version__)"], {
+      windowsHide: true,
+      encoding: "utf8",
+      timeout: 30000,
+    });
+  } catch {
+    return { present: false, version: null };
+  }
+  const version = res && res.status === 0
+    ? (res.stdout || "").trim().split(/\r?\n/)[0] || "present"
+    : null;
+  return { present: version !== null, version };
+}
+
+/** Tesseract presence probe (version print only — never processes files). */
+function detectTesseract() {
+  const v = runVersion("tesseract");
+  return { present: Boolean(v), version: v };
+}
+
 /** Read the autocad-mcp entry from an OpenCode config (read-only). */
 function readMcpConfig(configPath) {
   if (!configPath) return { configured: false, command: null, commandExists: false };
@@ -311,4 +362,5 @@ module.exports = {
   resolveSkillsTarget, backupRootFor, legacyInstallDirs,
   documentedSkillRoots, isDocumentedTarget, readInstalled,
   detectNpm, detectPython, detectAutoCAD, readMcpConfig,
+  detectRefTools, detectPypdf, detectTesseract, REF_TOOL_SCRIPTS,
 };

@@ -8,11 +8,13 @@ const path = require("path");
 const { buildContext, EXIT_OK, EXIT_ERROR } = require("../context");
 const {
   detectNpm, detectPython, detectAutoCAD, isDocumentedTarget, globalConfigDir,
+  detectRefTools, detectPypdf, detectTesseract,
 } = require("../detect");
 const { inspectSkillPermission } = require("../config");
 const { validateSkillDir } = require("../validate");
 const { diffAgainstManifest } = require("../manifest");
 const { inspectReferences, indexStatus } = require("../references");
+const { isOpenCodeAgent, isAgentTarget, AGENTS } = require("../agents");
 
 const STATUS = { PASS: "PASS", WARN: "WARN", ERROR: "ERROR", MISSING: "NOT DETECTED" };
 
@@ -43,12 +45,20 @@ function run(opts = {}) {
     return render(checks);
   }
 
+  // --- Host agent -----------------------------------------------------------
+  // Everything below that reads opencode.json (registration, permission,
+  // MCP entry) only applies to OpenCode. Other agents discover the skill
+  // by directory alone; their rows are informational, never errors.
+  const isOpen = isOpenCodeAgent(ctx.agent);
+
   // --- OpenCode -----------------------------------------------------------
-  add(
-    "OpenCode",
-    ctx.openCode.detected ? STATUS.PASS : STATUS.MISSING,
-    ctx.openCode.detected ? ctx.openCode.signals.join(", ") : "no binary, config, or .opencode/ found"
-  );
+  if (isOpen) {
+    add(
+      "OpenCode",
+      ctx.openCode.detected ? STATUS.PASS : STATUS.MISSING,
+      ctx.openCode.detected ? ctx.openCode.signals.join(", ") : "no binary, config, or .opencode/ found"
+    );
+  }
 
   // --- Skill installation -------------------------------------------------
   if (ctx.installed.installed) {
@@ -62,16 +72,30 @@ function run(opts = {}) {
   }
 
   // --- Skill identity -----------------------------------------------------
-  add("Skill ID", STATUS.PASS, `${ctx.skillId} (OpenCode slash command /${ctx.skillId})`);
+  if (isOpen) {
+    add("Skill ID", STATUS.PASS, `${ctx.skillId} (OpenCode slash command /${ctx.skillId})`);
+  } else {
+    add("Skill ID", STATUS.PASS, `${ctx.skillId} (${ctx.agentLabel} invocation: ${ctx.agentInvoke})`);
+  }
 
   // --- Discovery ----------------------------------------------------------
-  if (isDocumentedTarget(ctx.targetDir, ctx.projectRoot)) {
-    add("Skill discovery", STATUS.PASS, `${ctx.targetDir} is a documented OpenCode source`);
+  if (isOpen) {
+    if (isDocumentedTarget(ctx.targetDir, ctx.projectRoot)) {
+      add("Skill discovery", STATUS.PASS, `${ctx.targetDir} is a documented OpenCode source`);
+    } else {
+      add(
+        "Skill discovery",
+        STATUS.ERROR,
+        `${ctx.targetDir} is NOT a documented OpenCode skill source — the skill will not be advertised`
+      );
+    }
+  } else if (isAgentTarget(ctx.agent, ctx.targetDir, ctx.projectRoot)) {
+    add("Skill discovery", STATUS.PASS, `${ctx.targetDir} is inside ${ctx.agentLabel}'s skills root`);
   } else {
     add(
       "Skill discovery",
       STATUS.ERROR,
-      `${ctx.targetDir} is NOT a documented OpenCode skill source — the skill will not be advertised`
+      `${ctx.targetDir} is NOT inside ${ctx.agentLabel}'s skills root — the skill will not be advertised`
     );
   }
 
@@ -89,23 +113,26 @@ function run(opts = {}) {
     add("Legacy install", STATUS.PASS, "none");
   }
 
-  // --- skill permission ----------------------------------------------------
-  const perm = inspectSkillPermission(
-    [ctx.configPath, path.join(globalConfigDir(), "opencode.json")],
-    ctx.skillId
-  );
-  if (perm.parseError) {
-    add("skill permission", STATUS.WARN, `configuration unreadable: ${perm.parseError}`);
-  } else if (perm.effect === "deny") {
-    add("skill permission", STATUS.ERROR, `denied by rule "${perm.resource}" (${perm.source}) — the skill is hidden`);
-  } else if (perm.effect === "ask") {
-    add("skill permission", STATUS.WARN, `rule "${perm.resource}" asks before loading (${perm.source})`);
-  } else {
-    add(
-      "skill permission",
-      STATUS.PASS,
-      perm.present ? `allowed by rule "${perm.resource}"` : "allowed by OpenCode's default policy"
+  // --- skill permission (OpenCode only) -------------------------------------
+  // Other agents have no skill-permission rules to inspect.
+  if (isOpen) {
+    const perm = inspectSkillPermission(
+      [ctx.configPath, path.join(globalConfigDir(), "opencode.json")],
+      ctx.skillId
     );
+    if (perm.parseError) {
+      add("skill permission", STATUS.WARN, `configuration unreadable: ${perm.parseError}`);
+    } else if (perm.effect === "deny") {
+      add("skill permission", STATUS.ERROR, `denied by rule "${perm.resource}" (${perm.source}) — the skill is hidden`);
+    } else if (perm.effect === "ask") {
+      add("skill permission", STATUS.WARN, `rule "${perm.resource}" asks before loading (${perm.source})`);
+    } else {
+      add(
+        "skill permission",
+        STATUS.PASS,
+        perm.present ? `allowed by rule "${perm.resource}"` : "allowed by OpenCode's default policy"
+      );
+    }
   }
 
   // --- Skill integrity ----------------------------------------------------
@@ -144,31 +171,39 @@ function run(opts = {}) {
     }
   }
 
-  // --- OpenCode configuration ---------------------------------------------
-  if (ctx.configError) {
-    add("OpenCode configuration", STATUS.ERROR, ctx.configError.message);
-  } else if (!ctx.configPath) {
-    add("OpenCode configuration", STATUS.MISSING, "no opencode.json found");
-  } else {
-    const r = ctx.registration;
-    if (r && r.registered) {
-      add("OpenCode configuration", STATUS.PASS, `skill listed in skills array (${ctx.configPath})`);
-    } else if (r && r.conflict && ctx.installed.installed) {
-      add("OpenCode configuration", STATUS.WARN, `skills entry may duplicate this skill: ${r.conflict}`);
-    } else if (r && r.conflict) {
-      add("OpenCode configuration", STATUS.PASS, `skill provided by skills entry: ${r.conflict}`);
+  // --- OpenCode configuration (OpenCode only) -------------------------------
+  // Other agents keep no central config the installer manages; their MCP
+  // wiring is manual (see installer README) and reported below instead.
+  if (isOpen) {
+    if (ctx.configError) {
+      add("OpenCode configuration", STATUS.ERROR, ctx.configError.message);
+    } else if (!ctx.configPath) {
+      add("OpenCode configuration", STATUS.MISSING, "no opencode.json found");
     } else {
-      add(
-        "OpenCode configuration",
-        STATUS.PASS,
-        `auto-discovery location (${ctx.configPath}, no skills entry needed)`
-      );
+      const r = ctx.registration;
+      if (r && r.registered) {
+        add("OpenCode configuration", STATUS.PASS, `skill listed in skills array (${ctx.configPath})`);
+      } else if (r && r.conflict && ctx.installed.installed) {
+        add("OpenCode configuration", STATUS.WARN, `skills entry may duplicate this skill: ${r.conflict}`);
+      } else if (r && r.conflict) {
+        add("OpenCode configuration", STATUS.PASS, `skill provided by skills entry: ${r.conflict}`);
+      } else {
+        add(
+          "OpenCode configuration",
+          STATUS.PASS,
+          `auto-discovery location (${ctx.configPath}, no skills entry needed)`
+        );
+      }
     }
   }
 
   // --- autocad-mcp ---------------------------------------------------------
+  // OpenCode reads it from opencode.json; other agents wire it manually
+  // (see installer README), so only OpenCode gets a config verdict here.
   const mcp = ctx.mcp;
-  if (mcp.parseError) {
+  if (!isOpen) {
+    add("autocad-mcp", STATUS.MISSING, `configure manually for ${ctx.agentLabel} (see installer README)`);
+  } else if (mcp.parseError) {
     add("autocad-mcp", STATUS.ERROR, `config unreadable: ${mcp.parseError}`);
   } else if (!mcp.present) {
     add("autocad-mcp", STATUS.MISSING, "not configured in opencode.json");
@@ -252,6 +287,28 @@ function run(opts = {}) {
       add(`Reference index (${scope})`, STATUS.PASS, parts.join("; "));
     }
   }
+
+  // --- Reference toolchain --------------------------------------------------
+  // Presence checks only (versions printed, nothing executed against user
+  // files). Absent tools are MISSING (informational), never errors: every
+  // reference phase degrades gracefully without them.
+  const refTools = detectRefTools();
+  if (!refTools.toolsDir) {
+    add("Reference tools", STATUS.MISSING, "scripts not found (repo tools/ or packaged tools/)");
+  } else {
+    const absent = refTools.scripts.filter((s) => !s.present).map((s) => s.name);
+    if (absent.length) {
+      add("Reference tools", STATUS.WARN, `partial copy at ${refTools.toolsDir} — missing: ${absent.join(", ")}`);
+    } else {
+      add("Reference tools", STATUS.PASS, `${refTools.scripts.length} scripts at ${refTools.toolsDir}`);
+    }
+  }
+  const pypdf = detectPypdf();
+  add("pypdf (extraction)", pypdf.present ? STATUS.PASS : STATUS.MISSING,
+    pypdf.present ? `pypdf ${pypdf.version}` : "not importable (Tier-1 extraction unavailable)");
+  const tess = detectTesseract();
+  add("Tesseract (OCR)", tess.present ? STATUS.PASS : STATUS.MISSING,
+    tess.present ? `${tess.version}` : "not installed (OCR unavailable)");
 
   // --- Python ---------------------------------------------------------------
   const py = detectPython();

@@ -1,6 +1,7 @@
 "use strict";
 
-/* `autocad-skill install` — copy the skill into the OpenCode project. */
+/* `autocad-skill install` — copy the skill into the selected agent's skills folder. */
+
 
 const path = require("path");
 const ui = require("../ui");
@@ -12,14 +13,15 @@ const { needConfirm } = require("../prompt");
 const { registerSkillPath } = require("../config");
 const { migrate } = require("../migrate");
 const { readInstalled } = require("../detect");
+const { isOpenCodeAgent } = require("../agents");
 
 async function run(opts = {}) {
   ui.header("Engineering CAD Agent Skill");
   const ctx = buildContext(opts);
 
-  // An unreadable opencode.json stops us: we refuse to act on a project whose
-  // configuration we cannot read and therefore cannot preserve or verify.
-  if (ctx.configError) {
+  // An unreadable opencode.json stops us — but only for OpenCode, the one
+  // agent whose configuration we read. Other agents never consult it.
+  if (ctx.configError && isOpenCodeAgent(ctx.agent)) {
     ui.fail(`OpenCode configuration cannot be read: ${ctx.configError.message}`);
     return EXIT_ERROR;
   }
@@ -27,20 +29,29 @@ async function run(opts = {}) {
   // 1. OS
   ui.ok(`OS detected: ${ctx.osInfo.name}`);
 
-  // 2. OpenCode
-  if (ctx.openCode.detected) {
-    ui.ok(`OpenCode detected (${ctx.openCode.signals.join(", ")})`);
+  // 2. Host agent
+  if (isOpenCodeAgent(ctx.agent)) {
+    if (ctx.openCode.detected) {
+      ui.ok(`OpenCode detected (${ctx.openCode.signals.join(", ")})`);
+    } else {
+      ui.warn("OpenCode not detected — the skill will still be copied to the standard location");
+    }
   } else {
-    ui.warn("OpenCode not detected — the skill will still be copied to the standard location");
+    ui.ok(`Target agent: ${ctx.agentLabel} (invoke with ${ctx.agentInvoke})`);
   }
 
   // 3. Target skill directory + identity
   ui.ok(`Skill directory: ${ctx.targetDir} (${ctx.mode})`);
-  ui.ok(`Skill ID: ${ctx.skillId} (OpenCode slash command: /${ctx.skillId})`);
+  if (isOpenCodeAgent(ctx.agent)) {
+    ui.ok(`Skill ID: ${ctx.skillId} (OpenCode slash command: /${ctx.skillId})`);
+  } else {
+    ui.ok(`Skill ID: ${ctx.skillId} (${ctx.agentLabel} invocation: ${ctx.agentInvoke})`);
+  }
 
-  // 4. --register is a configuration-only action: it applies whether or not
-  //    the skill files are already in place, and it prompts before writing.
-  if (ctx.register) {
+  // 4. --register is an OpenCode-only action (it edits opencode.json).
+  if (ctx.register && !isOpenCodeAgent(ctx.agent)) {
+    ui.warn("--register only applies to OpenCode; skipped for this agent.");
+  } else if (ctx.register) {
     const rc = await handleRegister(ctx);
     if (rc !== EXIT_OK) return rc;
   }
@@ -69,8 +80,9 @@ async function run(opts = {}) {
   ui.step(`Installing ${ctx.skillId} (${files.length} files, version ${srcVersion})`);
 
   // 8. Another source root may already provide this skill id: confirm before
-  //    creating a second copy of it.
-  const duplicate = ctx.registration && ctx.registration.conflict && !ctx.registration.registered;
+  //    creating a second copy of it. (OpenCode registration conflicts only;
+  //    other agents have no shared registry to consult.)
+  const duplicate = isOpenCodeAgent(ctx.agent) && ctx.registration && ctx.registration.conflict && !ctx.registration.registered;
   if (duplicate) {
     const rc = await confirmDuplicate(ctx);
     if (rc !== EXIT_OK) return rc;
@@ -114,13 +126,18 @@ async function run(opts = {}) {
   return EXIT_OK;
 }
 
-/** Shared tail: how the user actually gets to the skill in OpenCode. */
+/** Shared tail: how the user actually reaches the skill. */
 function nextSteps(ctx) {
   ui.blank();
   ui.out("Next steps:");
   ui.blank();
-  ui.out("1. Restart or reload OpenCode");
-  ui.out(`2. Type / to confirm /${ctx.skillId} is listed`);
+  if (isOpenCodeAgent(ctx.agent)) {
+    ui.out("1. Restart or reload OpenCode");
+    ui.out(`2. Type / to confirm /${ctx.skillId} is listed`);
+  } else {
+    ui.out(`1. Open ${ctx.agentLabel}`);
+    ui.out(`2. Invoke ${ctx.agentInvoke} to confirm the skill is listed`);
+  }
   ui.out("3. Start AutoCAD with a drawing open");
   ui.out("4. Ask:");
   ui.out('   "Create a 6000 × 4000 mm room."');
@@ -189,8 +206,14 @@ function reportAlreadyInstalled(ctx) {
   return EXIT_OK;
 }
 
-/** Read-only configuration report for the default (auto-discovery) path. */
+/** Read-only configuration report for the default (auto-discovery) path.
+ * OpenCode only: other agents discover by directory alone and keep no
+ * central skills registry to report on. */
 function reportConfigStatus(ctx) {
+  if (!isOpenCodeAgent(ctx.agent)) {
+    ui.info(`Discovery: ${ctx.agentLabel} loads skills from ${ctx.skillsRoot}`);
+    return;
+  }
   const root = ctx.skillsRoot;
   if (!ctx.configPath) {
     ui.info(`Configuration: no opencode.json found — auto-discovery location ${root}`);

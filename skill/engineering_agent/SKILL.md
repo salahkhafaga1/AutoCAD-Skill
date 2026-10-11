@@ -34,7 +34,9 @@ AI Agent Runtime
   ↓  MCP tool calls
 autocad-mcp  (NEVER modify this layer)
   ↓  COM/ActiveX
-AutoCAD 2026
+AutoCAD (2021 or newer; the MCP layer binds late-bound COM, so it attaches
+to whatever release is running — confirm the pairing with a live status
+check before relying on it)
 ```
 
 The MCP layer is a **stable, unchanging contract**. The agent reasons on top of it.

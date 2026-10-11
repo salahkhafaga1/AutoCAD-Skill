@@ -19,6 +19,7 @@ const {
 const { inspectRegistration, inspectMcp } = require("./config");
 const { compareTrees, diffAgainstManifest } = require("./manifest");
 const { isDir } = require("./fsx");
+const { requireAgent, agentRoots, isOpenCodeAgent, AGENTS } = require("./agents");
 
 const EXIT_OK = 0;
 const EXIT_ERROR = 1;
@@ -43,14 +44,19 @@ function scopeIsGlobal(opts = {}) {
 
 /**
  * Build the shared context.
- * opts: { cwd, project, global, local, skillId }
- * Throws on unrecoverable problems (no skill source, bad --project path).
+ * opts: { cwd, project, global, local, skillId, agent }
+ * Throws on unrecoverable problems (no skill source, bad --project path,
+ * unknown --agent name).
  *
  * Scope resolution (default = global):
- *   --global            -> ~/.config/opencode/skills/engineering-cad
- *   --local             -> <project>/.opencode/skills/engineering-cad
- *   --project <dir>     -> <dir>/.opencode/skills/engineering-cad
+ *   --global            -> <agent global skills>/engineering-cad
+ *   --local             -> <project>/<agent skills dir>/engineering-cad
+ *   --project <dir>     -> <dir>/<agent skills dir>/engineering-cad
  *   (nothing)           -> global, so `npx autocad-skill` works anywhere
+ *
+ * --agent selects the host family (opencode default; claude, codex).
+ * Target resolution is the only thing that changes: manifests, backups,
+ * validation, and file copying are host-agnostic.
  */
 function buildContext(opts = {}) {
   const cwd = path.resolve(opts.cwd || process.cwd());
@@ -69,20 +75,33 @@ function buildContext(opts = {}) {
   const project = findProjectRoot(startDir);
   const configPath = findConfigFile(project.root);
   const skillId = opts.skillId || SKILL_ID;
+  const agent = requireAgent(opts.agent);
 
   const globalTarget = scopeIsGlobal(opts);
-  const { skillsRoot, targetDir, mode } = resolveSkillsTarget(project.root, {
-    global: globalTarget,
-    skillId,
-  });
+  let skillsRoot;
+  let targetDir;
+  let mode;
+  let legacyDirs;
+  if (isOpenCodeAgent(agent)) {
+    ({ skillsRoot, targetDir, mode } = resolveSkillsTarget(project.root, {
+      global: globalTarget,
+      skillId,
+    }));
+    legacyDirs = legacyInstallDirs(project.root, { global: globalTarget })
+      .filter((d) => d !== targetDir);
+  } else {
+    const roots = agentRoots(agent, project.root);
+    skillsRoot = globalTarget ? roots.global : roots.project;
+    targetDir = path.join(skillsRoot, skillId);
+    mode = globalTarget ? "global" : "project";
+    legacyDirs = [];
+  }
 
   const source = resolveSkillSource();
   const pkg = readPackageMeta();
   const osInfo = detectOS();
   const openCode = detectOpenCode(project.root, configPath);
   const installed = readInstalled(targetDir);
-  const legacyDirs = legacyInstallDirs(project.root, { global: globalTarget })
-    .filter((d) => d !== targetDir);
 
   // A config file that exists but cannot be parsed is captured, not thrown:
   // doctor still runs its other checks, install stops with a clear error.
@@ -100,6 +119,8 @@ function buildContext(opts = {}) {
 
   return {
     cwd, startDir, skillId, mode, global: globalTarget,
+    agent, agentLabel: AGENTS[agent].label,
+    agentInvoke: AGENTS[agent].invoke(skillId),
     projectRoot: project.root,
     projectSignals: project.signals,
     configPath,

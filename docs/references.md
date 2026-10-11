@@ -8,6 +8,40 @@ engineering documents (codes, handbooks) and cite them with page numbers.
 Everything stays on your machine: originals are never moved, uploaded,
 or published, and generated indexes are regenerable local caches.
 
+## Fresh-machine setup (from npx, minutes)
+
+On any new machine, with no repository checkout needed:
+
+```text
+npx autocad-skill install
+npx autocad-skill refs init
+npx autocad-skill doctor
+```
+
+`refs init` scaffolds the empty global library (directories plus an
+empty manifest — existing files are never overwritten) and prints the
+next steps. `doctor` then reports the toolchain state: reference
+scripts found or missing, `pypdf` importable or not, Tesseract
+installed or not. Each missing piece degrades gracefully (extraction
+needs `pypdf`, OCR needs Tesseract, search needs only the indexes),
+and every check is a warning at most — a fresh machine is a supported
+state, never an error.
+
+The optional extraction environment, only if you want Tier-1 indexing:
+
+```text
+python -m venv .venv-ref
+.venv-ref/Scripts/python.exe -m pip install -r <package-tools>/requirements-ref.txt
+```
+
+(`tools/` ships inside the npm package next to `bin/` and `lib/`;
+`requirements-ref.txt` pins the exact approved version.)
+
+Tesseract is a machine-level install outside this project: run the
+Windows installer with administrator rights and select the Arabic
+language pack alongside English when offered. The skill never installs
+it, and everything works without it except OCR itself.
+
 ## Library locations
 
 - **Global (all your projects):** `<home>/.config/autocad-skill/references`

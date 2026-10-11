@@ -19,7 +19,7 @@ Source of Truth: `autocad_mcp/acad_core.py`
 ## 1. Session & Connection Tools
 
 ### `autocad_status`
-- **Purpose:** Verifies connection to a running AutoCAD 2026 session and reports active drawing.
+- **Purpose:** Verifies connection to a running AutoCAD session (any recent version; verified against 2026, compatibility with older releases such as 2021 is confirmed by live test before reliance) and reports active drawing.
 - **Type:** Read-Only | **Risk:** 🟢 GREEN
 - **Parameters:** None (`{}`)
 - **Key Output:** `version: string`, `caption: string`, `visible: bool`, `active_document: document_info {name, path, saved, readonly, insunits, insunits_name, coordinates_contract, unit_warning}`

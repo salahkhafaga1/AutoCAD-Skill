@@ -12,6 +12,7 @@ const { writeManifest, diffAgainstManifest, compareTrees, provenanceFiles, MANIF
 const { validateSkillDir } = require("../validate");
 const { needConfirm } = require("../prompt");
 const { reportLegacy } = require("../migrate");
+const { isOpenCodeAgent } = require("../agents");
 
 async function run(opts = {}) {
   if (opts.rollback) return rollback(opts);
@@ -19,7 +20,7 @@ async function run(opts = {}) {
   ui.header("Engineering CAD Agent Skill update");
   const ctx = buildContext(opts);
 
-  if (ctx.configError) {
+  if (ctx.configError && isOpenCodeAgent(ctx.agent)) {
     ui.fail(`OpenCode configuration cannot be read: ${ctx.configError.message}`);
     return EXIT_ERROR;
   }
