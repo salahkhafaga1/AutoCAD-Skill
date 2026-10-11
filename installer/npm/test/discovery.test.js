@@ -54,7 +54,7 @@ test("global install lands in a documented OpenCode discovery source", (t) => {
     "must not install into <home>/.opencode/skills"
   );
 
-  assert.match(r.stdout, /Skill ID: engineering-cad \(OpenCode slash command: \/engineering-cad\)/);
+  assert.match(r.stdout, /Skill ID: engineering-cad \(mention @engineering-cad/);
 });
 
 test("--global and the default resolve to the same directory", (t) => {
@@ -96,14 +96,16 @@ test("installed frontmatter meets OpenCode's requirements", (t) => {
   const md = fs.readFileSync(path.join(globalTargetOf(home), "SKILL.md"), "utf8");
   const fm = frontmatter(md);
 
-  // Display label agrees with the directory name (both drive the slash command).
+  // Display label agrees with the directory name (the path-derived skill id).
   assert.match(fm, /^name:\s*engineering-cad\s*$/m, "frontmatter name is the skill id");
 
   // `description` is what makes the skill advertised in the first place.
   assert.match(fm, /^description:/m, "description is required for advertisement");
 
-  // Exposed as a TUI slash command.
-  assert.match(fm, /^slash:\s*true\s*$/m, "slash visibility enabled");
+  // No fictional OpenCode fields: skills never appear as / commands on their
+  // own (commands/ files do that). Unknown keys are ignored silently, so a
+  // stale `slash: true` would mislead authors without ever working.
+  assert.doesNotMatch(fm, /^slash:\s*true\s*$/m, "no fictional slash field");
 
   // Nothing may opt the skill out of discovery.
   assert.doesNotMatch(fm, /autoinvoke:\s*false/i, "must not be hidden from the model");
@@ -134,7 +136,7 @@ test("doctor confirms id, discovery source, and skill permission", (t) => {
 
   const r = runCli(["doctor"], { cwd: project, env });
   assert.strictEqual(r.status, 0, r.output);
-  assert.match(r.stdout, /✓ Skill ID .*engineering-cad .*\/engineering-cad/);
+  assert.match(r.stdout, /✓ Skill ID .*engineering-cad .*@engineering-cad/);
   assert.match(r.stdout, /✓ Skill discovery .*is a documented OpenCode source/);
   assert.match(r.stdout, /✓ skill permission/);
   assert.match(r.stdout, /Result: no errors\./);

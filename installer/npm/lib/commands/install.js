@@ -6,17 +6,108 @@
 const path = require("path");
 const ui = require("../ui");
 const { buildContext, EXIT_OK, EXIT_ERROR, EXIT_ABORT } = require("../context");
-const { walkFiles, copyFiles } = require("../fsx");
+const { walkFiles, copyFiles, exists } = require("../fsx");
 const { writeManifest, diffAgainstManifest } = require("../manifest");
 const { validateSkillDir } = require("../validate");
-const { needConfirm } = require("../prompt");
-const { registerSkillPath } = require("../config");
+const { needConfirm, choose, askText } = require("../prompt");
+const { registerSkillPath, mcpServerSnippet, writeMcpServer } = require("../config");
 const { migrate } = require("../migrate");
-const { readInstalled } = require("../detect");
-const { isOpenCodeAgent } = require("../agents");
+const { readInstalled, detectHosts, homeDir, globalConfigDir } = require("../detect");
+const { AGENTS, isOpenCodeAgent } = require("../agents");
+
+/**
+ * Interactive install routing: which agent host, which scope.
+ * Only ever called on an interactive terminal without --yes. Returns
+ * flag-shaped overrides ({ agent } and/or { global } / { local }).
+ * Explicit flags always win — this function only fills the gaps.
+ */
+async function resolveInstallPlan(opts = {}) {
+  const plan = {};
+  if (!opts.agent) {
+    const cwd = path.resolve(opts.cwd || process.cwd());
+    const startDir = opts.project ? path.resolve(cwd, opts.project) : cwd;
+    const hosts = detectHosts(startDir);
+    const ordered = [...hosts.filter((h) => h.detected), ...hosts.filter((h) => !h.detected)];
+    const labels = ordered.map((h) =>
+      `${AGENTS[h.agent].label}${h.detected && h.signals.length ? ` (detected: ${h.signals.join(", ")})` : ""}`
+    );
+    const picked = await choose("Which agent will use this skill?", labels, { defaultIndex: 0 });
+    plan.agent = ordered[picked].agent;
+  }
+  if (!opts.global && !opts.local && !opts.project) {
+    const picked = await choose("Install scope?", ["Global — every project on this machine", "Project — this project only"], { defaultIndex: 0 });
+    if (picked === 0) plan.global = true;
+    else plan.local = true;
+  }
+  return plan;
+}
+
+/**
+ * Post-install offer: wire the autocad-mcp server into the OpenCode config
+ * matching the install scope. TTY-only, OpenCode-only, skipped under --yes
+ * and --dry-run. Never overwrites a differing entry (prints the manual
+ * snippet instead) and backs up before writing.
+ */
+async function offerMcpWiring(ctx) {
+  const q = await needConfirm(
+    `Wire the autocad-mcp server into ${ctx.global ? "global" : "project"} OpenCode config now?`,
+    { yes: ctx.yes }
+  );
+  if (!q.proceed) {
+    ui.out("Skipped — wire it later by hand (see installer README, Troubleshooting).");
+    return;
+  }
+  const checkout = await askText("Path to your autocad-mcp checkout (empty to skip):");
+  if (!checkout) {
+    ui.out("Skipped — nothing was written.");
+    return;
+  }
+  const exe = process.platform === "win32"
+    ? path.join(checkout, ".venv", "Scripts", "autocad-mcp.exe")
+    : path.join(checkout, ".venv", "bin", "autocad-mcp");
+  if (!exists(exe)) {
+    ui.fail(`No server entry point at ${exe} — set up the autocad-mcp venv first, then re-run.`);
+    ui.out("Manual snippet (fill in your paths):");
+    ui.out(mcpServerSnippet("<path-to-autocad-mcp.exe>", "<path-to-autocad-mcp-checkout>", "<output-dir>"));
+    return;
+  }
+  const outputRoot = path.join(homeDir(), "Documents", "autocad-mcp");
+  const configPath = ctx.global
+    ? path.join(globalConfigDir(), "opencode.json")
+    : ctx.configPath;
+  if (!configPath) {
+    ui.warn("No project opencode.json found — nothing was written. Add this block by hand:");
+    ui.out(mcpServerSnippet(exe, checkout, outputRoot));
+    return;
+  }
+  try {
+    const res = writeMcpServer(configPath, { command: exe, cwd: checkout, outputRoot });
+    if (!res.changed) {
+      ui.ok("Server already wired with the same command — nothing to do.");
+    } else {
+      ui.ok(`Wired autocad-mcp into ${configPath}${res.backupPath ? ` (backup: ${res.backupPath})` : ""}.`);
+      ui.out("Restart the OpenCode session so the server starts, then open AutoCAD with a drawing.");
+    }
+  } catch (e) {
+    if (e && e.code === "ECONFIGCONFLICT") {
+      ui.warn(`${e.message} Left untouched — merge by hand:`);
+      ui.out(mcpServerSnippet(exe, checkout, outputRoot));
+      return;
+    }
+    throw e;
+  }
+}
 
 async function run(opts = {}) {
   ui.header("Engineering CAD Agent Skill");
+
+  // Interactive setup (TTY only): pick the agent host and the scope when
+  // flags did not say. Flags, --yes, and non-interactive runs keep the
+  // long-standing defaults (OpenCode, global) byte-for-byte.
+  if (process.stdin.isTTY && !opts.yes) {
+    const planned = await resolveInstallPlan(opts);
+    opts = { ...opts, ...planned };
+  }
   const ctx = buildContext(opts);
 
   // An unreadable opencode.json stops us — but only for OpenCode, the one
@@ -43,7 +134,7 @@ async function run(opts = {}) {
   // 3. Target skill directory + identity
   ui.ok(`Skill directory: ${ctx.targetDir} (${ctx.mode})`);
   if (isOpenCodeAgent(ctx.agent)) {
-    ui.ok(`Skill ID: ${ctx.skillId} (OpenCode slash command: /${ctx.skillId})`);
+    ui.ok(`Skill ID: ${ctx.skillId} (mention @${ctx.skillId} in a prompt, or ask a CAD task)`);
   } else {
     ui.ok(`Skill ID: ${ctx.skillId} (${ctx.agentLabel} invocation: ${ctx.agentInvoke})`);
   }
@@ -120,6 +211,12 @@ async function run(opts = {}) {
   }
   ui.ok(`Installation validated (${v.fileCount} files)`);
 
+  // Interactive follow-through (TTY only, OpenCode only): offer MCP wiring.
+  // Scripts, flags, and non-interactive runs never see a prompt.
+  if (process.stdin.isTTY && !ctx.yes && !ctx.dryRun && isOpenCodeAgent(ctx.agent)) {
+    await offerMcpWiring(ctx);
+  }
+
   ui.blank();
   ui.out("Installation complete.");
   nextSteps(ctx);
@@ -133,7 +230,7 @@ function nextSteps(ctx) {
   ui.blank();
   if (isOpenCodeAgent(ctx.agent)) {
     ui.out("1. Restart or reload OpenCode");
-    ui.out(`2. Type / to confirm /${ctx.skillId} is listed`);
+    ui.out(`2. Mention @${ctx.skillId} in a prompt to confirm it loads`);
   } else {
     ui.out(`1. Open ${ctx.agentLabel}`);
     ui.out(`2. Invoke ${ctx.agentInvoke} to confirm the skill is listed`);

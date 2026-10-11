@@ -42,7 +42,7 @@ test("no command defaults to install into OpenCode's global skills source", (t) 
     "installed into <home>/.config/opencode/skills/engineering-cad"
   );
   assert.strictEqual(fs.existsSync(path.join(project, ".opencode")), false, "project left untouched");
-  assert.match(r.stdout, /Skill ID: engineering-cad \(OpenCode slash command: \/engineering-cad\)/);
+  assert.match(r.stdout, /Skill ID: engineering-cad \(mention @engineering-cad/);
 });
 
 test("a project with no opencode.json still installs, with a warning", (t) => {

@@ -343,6 +343,36 @@ function detectTesseract() {
   return { present: Boolean(v), version: v };
 }
 
+/**
+ * Which agent hosts show signs of life (read-only).
+ * Signals per host: OpenCode reuses detectOpenCode; Claude Code and Codex
+ * are detected by their well-known directories (home + project scope).
+ * Used only to order interactive choices and defaults — never to decide
+ * anything silently.
+ */
+function detectHosts(projectRoot) {
+  const oc = { agent: "opencode", detected: false, signals: [] };
+  try {
+    const openCode = detectOpenCode(projectRoot, findConfigFile(projectRoot));
+    oc.detected = openCode.detected;
+    oc.signals = openCode.signals;
+  } catch {
+    /* detection failure means "not detected", never an error */
+  }
+  const claudeSignals = [];
+  if (isDir(path.join(homeDir(), ".claude"))) claudeSignals.push("~/.claude/");
+  if (isDir(path.join(path.resolve(projectRoot), ".claude"))) claudeSignals.push(".claude/");
+  const codexSignals = [];
+  if (isDir(path.join(homeDir(), ".codex"))) codexSignals.push("~/.codex");
+  if (isDir(path.join(homeDir(), ".agents"))) codexSignals.push("~/.agents/");
+  if (isDir(path.join(path.resolve(projectRoot), ".agents"))) codexSignals.push(".agents/");
+  return [
+    oc,
+    { agent: "claude", detected: claudeSignals.length > 0, signals: claudeSignals },
+    { agent: "codex", detected: codexSignals.length > 0, signals: codexSignals },
+  ];
+}
+
 /** Read the autocad-mcp entry from an OpenCode config (read-only). */
 function readMcpConfig(configPath) {
   if (!configPath) return { configured: false, command: null, commandExists: false };
@@ -361,6 +391,6 @@ module.exports = {
   homeDir, globalSkillsRoot, globalConfigDir,
   resolveSkillsTarget, backupRootFor, legacyInstallDirs,
   documentedSkillRoots, isDocumentedTarget, readInstalled,
-  detectNpm, detectPython, detectAutoCAD, readMcpConfig,
+  detectNpm, detectPython, detectAutoCAD, readMcpConfig, detectHosts,
   detectRefTools, detectPypdf, detectTesseract, REF_TOOL_SCRIPTS,
 };

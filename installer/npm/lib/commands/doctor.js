@@ -10,7 +10,8 @@ const {
   detectNpm, detectPython, detectAutoCAD, isDocumentedTarget, globalConfigDir,
   detectRefTools, detectPypdf, detectTesseract,
 } = require("../detect");
-const { inspectSkillPermission } = require("../config");
+const { inspectSkillPermission, inspectMcp } = require("../config");
+const { exists } = require("../fsx");
 const { validateSkillDir } = require("../validate");
 const { diffAgainstManifest } = require("../manifest");
 const { inspectReferences, indexStatus } = require("../references");
@@ -73,7 +74,7 @@ function run(opts = {}) {
 
   // --- Skill identity -----------------------------------------------------
   if (isOpen) {
-    add("Skill ID", STATUS.PASS, `${ctx.skillId} (OpenCode slash command /${ctx.skillId})`);
+    add("Skill ID", STATUS.PASS, `${ctx.skillId} (mention @${ctx.skillId} in a prompt, or ask a CAD task)`);
   } else {
     add("Skill ID", STATUS.PASS, `${ctx.skillId} (${ctx.agentLabel} invocation: ${ctx.agentInvoke})`);
   }
@@ -200,17 +201,39 @@ function run(opts = {}) {
   // --- autocad-mcp ---------------------------------------------------------
   // OpenCode reads it from opencode.json; other agents wire it manually
   // (see installer README), so only OpenCode gets a config verdict here.
+  // Project AND global configs are both consulted: the most common
+  // "agent sees no tools" failure is wiring the server into a project
+  // whose config the active session never reads.
   const mcp = ctx.mcp;
   if (!isOpen) {
     add("autocad-mcp", STATUS.MISSING, `configure manually for ${ctx.agentLabel} (see installer README)`);
-  } else if (mcp.parseError) {
-    add("autocad-mcp", STATUS.ERROR, `config unreadable: ${mcp.parseError}`);
-  } else if (!mcp.present) {
-    add("autocad-mcp", STATUS.MISSING, "not configured in opencode.json");
-  } else if (!mcp.command) {
-    add("autocad-mcp", STATUS.WARN, "configured but no command entry");
   } else {
-    add("autocad-mcp", STATUS.PASS, `configured (command: ${mcp.command})`);
+    const globalMcpPath = path.join(globalConfigDir(), "opencode.json");
+    const globalMcp = inspectMcp(globalMcpPath);
+    const locations = [];
+    if (mcp.present && !mcp.parseError) locations.push("project");
+    if (globalMcp.present && !globalMcp.parseError) locations.push("global");
+    if (mcp.parseError) {
+      add("autocad-mcp", STATUS.ERROR, `config unreadable: ${mcp.parseError}`);
+    } else if (!locations.length) {
+      add(
+        "autocad-mcp",
+        STATUS.WARN,
+        "not configured in this project or globally — the agent will see no autocad tools. " +
+          "See installer README (Troubleshooting: agent sees no autocad tools)."
+      );
+    } else {
+      const entry = mcp.present ? mcp : globalMcp;
+      const cmd = entry.command;
+      const where = locations.join(" + ");
+      if (!cmd) {
+        add("autocad-mcp", STATUS.WARN, `configured (${where}) but no command entry`);
+      } else if (!exists(cmd)) {
+        add("autocad-mcp", STATUS.WARN, `configured (${where}) but command not found: ${cmd}`);
+      } else {
+        add("autocad-mcp", STATUS.PASS, `configured (${where}; command: ${cmd})`);
+      }
+    }
   }
 
   // --- Reference library --------------------------------------------------

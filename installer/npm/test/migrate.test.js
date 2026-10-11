@@ -76,7 +76,7 @@ test("install migrates a broken home install into the documented global source",
   assert.match(r.stdout, /can now be removed/);
   assert.match(r.stdout, /Kept .*engineering_agent/);
   assert.match(r.stdout, /Installation complete \(migrated from an old location\)\./);
-  assert.match(r.stdout, /\/engineering-cad/);
+  assert.match(r.stdout, /@engineering-cad/);
 });
 
 test("install --yes migrates and then removes the old copy, leaving siblings alone", async (t) => {

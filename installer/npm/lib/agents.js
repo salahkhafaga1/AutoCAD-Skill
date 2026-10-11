@@ -10,7 +10,7 @@
  * comes free because all home-derived paths flow through homeDir().
  *
  * Opencode-only concepts (opencode.json registration, skill permission
- * rules, slash-command advertisement) stay in opencode-specific code
+ * rules, mention-handle wording) stay in opencode-specific code
  * paths guarded by isOpenCodeAgent(). Nothing here changes default
  * behavior: agent "opencode" resolves exactly as before.
  */

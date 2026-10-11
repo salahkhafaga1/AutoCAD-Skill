@@ -4,7 +4,6 @@ description: >
   Engineering CAD Agent — an AI reasoning layer that drives AutoCAD through
   the autocad-mcp MCP server to plan, execute, verify, and maintain complex
   CAD projects with engineering-grade discipline.
-slash: true
 requires_mcp:
   - autocad-mcp
 ---

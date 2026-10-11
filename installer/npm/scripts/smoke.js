@@ -156,7 +156,7 @@ function writeLegacyManifest(dir) {
 }
 
 function main() {
-  const tarball = path.resolve(process.argv[2] || path.join(PKG, "autocad-skill-0.3.0.tgz"));
+  const tarball = path.resolve(process.argv[2] || path.join(PKG, "autocad-skill-0.4.0.tgz"));
   if (!fs.existsSync(tarball)) {
     console.error(`smoke: tarball not found: ${tarball}`);
     console.error("smoke: run `npm pack` first, or pass the tarball path.");
@@ -240,13 +240,13 @@ function main() {
       !fs.existsSync(path.join(home1, ".opencode", "skills")),
       "not installed into <home>/.opencode/skills"
     );
-    check(install.stdout.includes("/engineering-cad"), "install reports the slash command");
+    check(install.stdout.includes("@engineering-cad"), "install reports the mention handle");
     check(install.stdout.includes("Skill ID: engineering-cad"), "install reports the skill id");
 
     const md = fs.readFileSync(path.join(target, "SKILL.md"), "utf8");
     const fm = frontmatter(md);
     check(/^name:\s*engineering-cad\s*$/m.test(fm), "frontmatter name is engineering-cad");
-    check(/^slash:\s*true\s*$/m.test(fm), "frontmatter slash: true");
+    check(!/^slash:\s*true\s*$/m.test(fm), "no fictional slash field in frontmatter");
     check(/^description:/m.test(fm), "frontmatter description present");
     check(!/autoinvoke:\s*false/i.test(fm), "skill is not hidden from the model");
 
@@ -296,7 +296,7 @@ function main() {
     // The whole point: the migrated copy carries the fixed identity.
     const migMd = fs.readFileSync(path.join(newTarget, "SKILL.md"), "utf8");
     check(/^name:\s*engineering-cad\s*$/m.test(frontmatter(migMd)), "migrated frontmatter name refreshed");
-    check(/^slash:\s*true\s*$/m.test(frontmatter(migMd)), "migrated frontmatter keeps slash: true");
+    check(!/^slash:\s*true\s*$/m.test(frontmatter(migMd)), "migrated frontmatter has no fictional slash field");
     const migSj = readJson(path.join(newTarget, "skill.json"));
     check(migSj.id === "engineering-cad", "migrated skill.json id refreshed");
     check(/Refreshed 2 file\(s\) from the current package/.test(mig.stdout), "migration reports what it refreshed");
