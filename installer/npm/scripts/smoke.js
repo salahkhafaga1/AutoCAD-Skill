@@ -156,7 +156,7 @@ function writeLegacyManifest(dir) {
 }
 
 function main() {
-  const tarball = path.resolve(process.argv[2] || path.join(PKG, "autocad-skill-0.2.0.tgz"));
+  const tarball = path.resolve(process.argv[2] || path.join(PKG, "autocad-skill-0.3.0.tgz"));
   if (!fs.existsSync(tarball)) {
     console.error(`smoke: tarball not found: ${tarball}`);
     console.error("smoke: run `npm pack` first, or pass the tarball path.");
@@ -213,6 +213,7 @@ function main() {
     }
 
     const skillJsonSrc = readJson(path.join(srcRoot, "skill", "engineering_agent", "skill.json"));
+    const pkgSrc = readJson(path.join(PKG, "package.json"));
     const env1 = { AUTOCAD_SKILL_HOME: home1 };
 
     // 3. The installed binary behaves like `npx autocad-skill` ---------------
@@ -224,7 +225,7 @@ function main() {
     const lines = ver.stdout.trim().split(/\r?\n/);
     check(ver.ok && lines[0] === "Engineering CAD Agent", "version prints the package banner");
     check(lines[1] === `Skill version: ${skillJsonSrc.version}`, "version prints the packaged skill version");
-    check(lines[2] === "Installer version: 0.2.0", "version prints the installer version");
+    check(lines[2] === `Installer version: ${pkgSrc.version}`, "version prints the installer version");
 
     const dry = cli(bin, ["install", "--dry-run", "--yes"], { cwd: app, env: env1 });
     check(dry.ok, "install --dry-run exits 0");

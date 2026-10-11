@@ -11,9 +11,9 @@ const BACKUPS = (p) => path.join(p, ".autocad-skill-backups");
 
 function newerSource() {
   return makeSkillSource({
-    version: "0.2.0",
+    version: "0.3.0",
     mutate: (dir) => {
-      fs.appendFileSync(path.join(dir, "rules", "planning_rules.md"), "\n<!-- updated by 0.2.0 -->\n");
+      fs.appendFileSync(path.join(dir, "rules", "planning_rules.md"), "\n<!-- updated by 0.3.0 -->\n");
       fs.writeFileSync(path.join(dir, "workflows", "extra_workflow.md"), "# Extra workflow\n");
       fs.rmSync(path.join(dir, "workflows", "plan_only.md"));
     },
@@ -32,8 +32,8 @@ test("update: plan, dry-run, refuse without confirmation, apply with --yes, then
   // 1. Dry run shows the plan and writes nothing.
   const dry = runCli(["update", "--project", project, "--dry-run"], { env });
   assert.strictEqual(dry.status, 0, dry.output);
-  assert.match(dry.stdout, /Current version:\s+0\.1\.0/);
-  assert.match(dry.stdout, /Available version: 0\.2\.0\s+\(MINOR\)/);
+  assert.match(dry.stdout, /Current version:\s+0\.2\.0/);
+  assert.match(dry.stdout, /Available version: 0\.3\.0\s+\(MINOR\)/);
   assert.match(dry.stdout, /Files that will be updated:/);
   assert.match(dry.stdout, /Files that will be added:/);
   assert.match(dry.stdout, /Files that will be removed/);
@@ -55,13 +55,13 @@ test("update: plan, dry-run, refuse without confirmation, apply with --yes, then
   assert.match(applied.stdout, /Update complete\./);
   assert.match(applied.stdout, /Backup created: /);
 
-  assert.match(fs.readFileSync(path.join(target, "rules", "planning_rules.md"), "utf8"), /updated by 0\.2\.0/);
+  assert.match(fs.readFileSync(path.join(target, "rules", "planning_rules.md"), "utf8"), /updated by 0\.3\.0/);
   assert.ok(fs.existsSync(path.join(target, "workflows", "extra_workflow.md")), "new file added");
   assert.ok(!fs.existsSync(path.join(target, "workflows", "plan_only.md")), "obsolete file removed");
 
   const manifest = readJson(path.join(target, ".autocad-skill-manifest.json"));
-  assert.strictEqual(manifest.skillVersion, "0.2.0");
-  assert.strictEqual(manifest.previousVersion, "0.1.0");
+  assert.strictEqual(manifest.skillVersion, "0.3.0");
+  assert.strictEqual(manifest.previousVersion, "0.2.0");
 
   const backups = fs.readdirSync(BACKUPS(project));
   assert.ok(backups.length >= 1, "a backup directory exists");
@@ -76,7 +76,7 @@ test("update: plan, dry-run, refuse without confirmation, apply with --yes, then
   assert.match(fs.readFileSync(path.join(target, "rules", "planning_rules.md"), "utf8"), /^# Planning/i);
 
   const restored = readJson(path.join(target, ".autocad-skill-manifest.json"));
-  assert.strictEqual(restored.skillVersion, "0.1.0");
+  assert.strictEqual(restored.skillVersion, "0.2.0");
 });
 
 test("update detects local modifications and will not overwrite them without confirmation", (t) => {

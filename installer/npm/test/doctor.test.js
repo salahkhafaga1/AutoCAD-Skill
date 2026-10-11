@@ -51,7 +51,7 @@ test("doctor sees an installed skill and reports integrity", (t) => {
   assert.strictEqual(runCli(["install", "--project", project]).status, 0);
   const r = runCli(["doctor", "--project", project]);
   assert.strictEqual(r.status, 0, r.output);
-  assert.match(r.stdout, /Engineering CAD Skill v0\.1\.0/);
+  assert.match(r.stdout, /Engineering CAD Skill v0\.2\.0/);
   assert.match(r.stdout, /Skill integrity .*structure and hashes verified/);
   assert.match(r.stdout, /Local modifications .*none/);
 });

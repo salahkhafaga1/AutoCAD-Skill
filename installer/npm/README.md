@@ -236,8 +236,8 @@ Prints exactly:
 
 ```
 Engineering CAD Agent
-Skill version: 0.1.0
-Installer version: 0.2.0
+Skill version: 0.2.0
+Installer version: 0.3.0
 Tool Contract version: 1
 ```
 

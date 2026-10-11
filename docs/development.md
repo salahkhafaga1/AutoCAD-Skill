@@ -104,7 +104,7 @@ records every released change.
 
 The npm package carries its own, separate version in
 `installer/npm/package.json`. It does not move together with the skill: the
-skill is 0.1.0, the installer is 0.2.0, and the tool contract version is 1.
+skill is 0.2.0, the installer is 0.3.0, and the tool contract version is 1.
 `autocad-skill version` prints all three.
 
 Update policy — now enforced in code by the installer rather than by

@@ -11,7 +11,7 @@ This skill is a **reasoning and workflow layer**. It does not talk to AutoCAD
 directly and it does **not** replace the MCP tool layer — it drives a fixed,
 scoped set of MCP tools with engineering discipline.
 
-**Current version:** 0.1.0 (see `CHANGELOG.md`) · **Docs:** [`docs/`](docs/)
+**Current version:** skill 0.2.0, installer 0.3.0 (see `CHANGELOG.md`) · **Docs:** [`docs/`](docs/)
 
 ---
 

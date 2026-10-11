@@ -120,7 +120,7 @@ test("skill.json id matches the installed directory name", (t) => {
   );
   const sj = JSON.parse(fs.readFileSync(path.join(globalTargetOf(home), "skill.json"), "utf8"));
   assert.strictEqual(sj.id, "engineering-cad");
-  assert.strictEqual(sj.version, "0.1.0");
+  assert.strictEqual(sj.version, "0.2.0");
   assert.strictEqual(sj.toolContractVersion, 1);
 });
 

@@ -1,9 +1,13 @@
 # Release Readiness Plan — Git, Live AutoCAD, OCR, Release
 
-Status: **PROPOSED, NOT APPROVED. Do not implement.** Four tracks, in
-dependency order: A (preserve work) first, B and C in any order after A,
-D last. Each track lists exact steps, evidence, and its own acceptance;
-nothing is approved until §5 is signed off.
+Status: **PARTIALLY IMPLEMENTED 2026-10-11.** Track A complete
+(committed + pushed). Track C: engine staged, gated tool implemented,
+full transcription blocked (see Track C). Track D: versions bumped,
+tools ship, smoke 49/49; npm publish blocked on registry auth (owner
+step). Track B: environment surprise — AutoCAD 2021 binary present
+and verified runnable (see Track B); interactive live test still
+pending. Nothing below requiring a machine, credentials, or an
+interactive session was performed.
 
 Starting state (verified 2026-10-11): ~20 modified plus ~18 untracked
 files covering the P0.1–P0.4 and P1 reference track; branch `main`
@@ -43,6 +47,27 @@ clean tree afterwards.
 
 ## Track B — Live AutoCAD validation (Level 4)
 
+**Status 2026-10-11: environment found, test not run.** Contrary to all
+earlier audits, `C:\Program Files\Autodesk\AutoCAD 2021\acad.exe`
+exists on this machine (installed after the P0.1 audit) and the core
+console prints its banner and runs (R.47.0.0). COM is registered
+(`AutoCAD.Application`, CurVer `AutoCAD.Application.24`). NO full GUI
+launch was attempted: first-run/licensing UI in an unattended session
+risks hanging the machine, so the interactive live test waits for a
+user-present session.
+
+Version caveat (blocking detail for the live run): this is AutoCAD
+**2021** (type library acax24; only acax24*.tlb present), while
+autocad-mcp was built and live-verified against **2026** (acax25). The
+server picks the newest installed library and its COM calls are
+unproven against the 2024 API. The live run must therefore ALSO answer
+whether the 29-tool surface works against 2021, or the project needs
+AutoCAD 2026 after all.
+
+**Goal:** replace the honest PENDING with a documented PASS (or a
+specific blockers list). This track needs a user-present session on
+this machine — nothing here was performed beyond read-only recon.
+
 **Goal:** replace the honest PENDING with a documented PASS (or a
 specific blockers list). This track needs a Windows machine with
 AutoCAD 2026, the autocad-mcp venv, and OpenCode — none present here,
@@ -65,6 +90,21 @@ so the first step is naming that machine.
    except test-note docs.
 
 ## Track C — OCR for the scanned code (R1)
+
+**Status 2026-10-11: tooling implemented, engine staged, transcription
+blocked.** Tesseract 5.4.0 installer staged in Downloads (hash verified
+via winget metadata); install itself needs one elevated user step
+(UAC denied the unattended install). `eng` plus `ara` best-model packs
+staged under `%APPDATA%\autocad-skill\tessdata`. Gated tool
+`tools/ref_ocr.py` plus `tests/test_ref_ocr.py` (5 tests) implemented.
+
+Full-page R1 transcription is BLOCKED on rendering: R1's text lives in
+JBIG2 bilevel streams (no local decoder) and its 445 JPEGs are 860×591
+low-resolution figures — below reliable OCR quality and not full-page
+rasters. Transcription waits on a page-render decision (e.g. a
+rasterizer with acceptable licensing) OR user-supplied page renders.
+The OCR tool verifies against any image the moment the engine exists;
+nothing about it depends on the R1 decision.
 
 **Goal:** transcribed, spot-checked R1 text with `low` confidence and
 `ocr` method labels. No uploads, local engine only.
@@ -93,6 +133,15 @@ so the first step is naming that machine.
    review — transcription enables retrieval, not trust.
 
 ## Track D — Cut the release
+
+**Status 2026-10-11: prepared through tagging; publish blocked on npm
+auth (registry returns 401 — owner runs `npm login` then `npm
+publish`).** Tools-shipping decision implemented: `tools/` ships via
+the prepack copy step (bytecode filtered out), user guide stays
+repo/GitHub-side consistent with existing docs handling. Versions:
+skill 0.1.0 → 0.2.0, installer 0.2.0 → 0.3.0, contract stays 1.
+Smoke 49/49 on the real 0.3.0 tarball (65 files, 98.9 kB, no banned
+content).
 
 **Goal:** versioned, published artifacts matching the implemented work.
 Decisions first, mechanics second.

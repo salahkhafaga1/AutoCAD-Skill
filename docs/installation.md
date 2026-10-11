@@ -59,7 +59,7 @@ yet built (see `installer/npm/README.md`).
    findable above the skill folder; otherwise the validator runs in a clearly
    reported degraded mode.
 
-## Install via npx — IMPLEMENTED (installer 0.2.0)
+## Install via npx — IMPLEMENTED (installer 0.3.0; reference tools ship since 0.3.0)
 
 ```
 npx autocad-skill install

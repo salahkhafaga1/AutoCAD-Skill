@@ -10,7 +10,7 @@ follows [Semantic Versioning](https://semver.org/):
 - **MAJOR** — breaking behavioral or structural changes.
 
 The npm package (`installer/npm/package.json`) is versioned separately from
-the skill: 0.1.0 is the skill, 0.2.0 is the installer, and the tool contract
+the skill: 0.2.0 is the skill, 0.3.0 is the installer, and the tool contract
 version is 1. A package-only release does not change the skill version.
 
 No change is recorded here until it actually exists in the repository.
@@ -19,9 +19,15 @@ No change is recorded here until it actually exists in the repository.
 
 ## [Unreleased]
 
-**Not released.** The npm package version is still 0.2.0, which is already
-published — a new package version (0.2.1) must be cut before the changes below
-can be published. See `docs/development.md` for the release steps.
+Nothing pending yet.
+
+---
+
+## [0.3.0] - 2026-10-11
+
+Reference track release: the skill moves 0.1.0 → 0.2.0 (MINOR —
+backward-compatible reference capability), the installer moves
+0.2.0 → 0.3.0 (new reference behavior), tool contract stays 1.
 
 ### Fixed
 
