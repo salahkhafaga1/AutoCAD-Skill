@@ -195,16 +195,37 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 
 ## Quick Start
 
-**Prerequisites:** Windows, Python 3.10+, OpenCode V2, a checkout of the
-separate autocad-mcp server installed into a virtual environment, and — for
-live use only — AutoCAD with a drawing open. Details:
+**Prerequisites:** Windows, Python 3.10+, an AI agent host (OpenCode V2,
+Claude Code, or Codex), a checkout of the separate autocad-mcp server
+installed into a virtual environment, and — for live use only —
+AutoCAD with a drawing open. Details:
 [`docs/installation.md`](docs/installation.md).
 
-```powershell
-git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
-```
+### Download options
 
-1. **Load the skill in OpenCode** — either run the installer:
+Pick any one — all of them deliver the same published package
+(current: `autocad-skill@0.3.0` on npm, source on GitHub):
+
+- **npx (recommended, no clone needed):**
+  ```powershell
+  npx autocad-skill install
+  ```
+- **Other agents:** add `--agent claude` or `--agent codex` to install
+  into that host's skills folders instead of OpenCode's. MCP wiring
+  for those hosts is manual — see
+  [`installer/npm/README.md`](installer/npm/README.md).
+- **Git clone (developers):**
+  ```powershell
+  git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
+  ```
+  Work from the checkout, run the Python and Node suites locally, and
+  install with `npx autocad-skill install --local` inside your project
+  or the manual wiring below.
+- **Tarball:** every GitHub release and the npm registry carry the
+  packed tarball (`autocad-skill-0.3.0.tgz`); unpack it anywhere and
+  run the `autocad-skill` binary from its `bin/` folder.
+
+1. **Load the skill in your agent** — either run the installer:
 
    ```powershell
    npx autocad-skill install
@@ -241,7 +262,7 @@ git clone https://github.com/salahkhafaga1/AutoCAD-Skill.git
    `create`, `continue`, `verify`, etc.
 
 > The `npx autocad-skill` installer is **IMPLEMENTED** since installer 0.2.0
-> (`install`, `update`, `rollback`, `doctor`, `version`) — see
+> (`install`, `update`, `rollback`, `doctor`, `refs`, `version`) — see
 > [`installer/npm/README.md`](installer/npm/README.md) for the full behavior,
 > including confirmation defaults, backups, and local-modification protection.
 
