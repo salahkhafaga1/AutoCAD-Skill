@@ -1,0 +1,19 @@
+{
+  "references": [
+    {
+      "id": "example-code",
+      "path": "example-code.pdf",
+      "title": "Synthetic Example Code",
+      "year": 2024,
+      "jurisdiction": "Example",
+      "kind": "code"
+    },
+    {
+      "id": "example-handbook",
+      "path": "handbooks/example-handbook.pdf",
+      "author": "Example Author",
+      "edition": "1st",
+      "kind": "handbook"
+    }
+  ]
+}

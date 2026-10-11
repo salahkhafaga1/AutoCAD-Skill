@@ -12,6 +12,7 @@ const {
 const { inspectSkillPermission } = require("../config");
 const { validateSkillDir } = require("../validate");
 const { diffAgainstManifest } = require("../manifest");
+const { inspectReferences, indexStatus } = require("../references");
 
 const STATUS = { PASS: "PASS", WARN: "WARN", ERROR: "ERROR", MISSING: "NOT DETECTED" };
 
@@ -175,6 +176,81 @@ function run(opts = {}) {
     add("autocad-mcp", STATUS.WARN, "configured but no command entry");
   } else {
     add("autocad-mcp", STATUS.PASS, `configured (command: ${mcp.command})`);
+  }
+
+  // --- Reference library --------------------------------------------------
+  // Read-only P0.1 diagnostics. A missing, empty, or invalid library is a
+  // warning at most — it must never fail the run or block the skill.
+  const refs = inspectReferences(ctx.projectRoot);
+  for (const scope of ["global", "project"]) {
+    const rep = refs[scope];
+    const label = `Reference library (${scope})`;
+    if (!rep.dirExists) {
+      add(label, STATUS.MISSING, `not configured (${rep.dir})`);
+      continue;
+    }
+    if (!rep.manifest.present) {
+      add(label, STATUS.MISSING, `no references.json — library not configured (${rep.dir})`);
+      continue;
+    }
+    if (!rep.manifest.valid) {
+      const extra = rep.manifest.errors.length > 1 ? ` (+${rep.manifest.errors.length - 1} more)` : "";
+      add(label, STATUS.WARN, `invalid manifest: ${rep.manifest.errors[0]}${extra}`);
+      continue;
+    }
+    if (rep.entries.length === 0) {
+      add(label, STATUS.WARN, "valid manifest, 0 references registered — library is empty");
+      continue;
+    }
+    const bad = rep.entries.filter((e) => e.status !== "ok");
+    const externals = rep.entries.filter((e) => e.status === "ok" && e.external).length;
+    if (bad.length === 0 && rep.manifest.warnings.length === 0) {
+      add(
+        label,
+        STATUS.PASS,
+        `${rep.entries.length} reference(s), all files present` +
+          (externals ? ` (${externals} external)` : "")
+      );
+    } else {
+      const parts = bad.slice(0, 3).map((e) => `${e.id || `#${e.index}`}: ${e.problems[0]}`);
+      if (rep.manifest.warnings.length) parts.push(`${rep.manifest.warnings.length} manifest warning(s)`);
+      if (bad.length > 3) parts.push(`+${bad.length - 3} more`);
+      add(label, STATUS.WARN, `${rep.entries.length} reference(s), ${bad.length} with problems: ${parts.join("; ")}`);
+    }
+  }
+  if (refs.duplicates.length) {
+    const names = refs.duplicates.map((d) => `"${d.id}" (${d.scopes.join(" + ")})`);
+    add("Reference conflicts", STATUS.WARN, `duplicate id(s), not resolved: ${names.join("; ")}`);
+  }
+
+  // --- Reference index status (P0.4, read-only) -----------------------------
+  // Warnings at most: a missing or stale index only means search cannot use
+  // that reference yet. Nothing here fails the run.
+  const fs = require("fs");
+  for (const scope of ["global", "project"]) {
+    const rep = refs[scope];
+    if (!rep.manifest.valid) continue;
+    let hasIndexDir = false;
+    try {
+      hasIndexDir = fs.statSync(path.join(rep.dir, ".index")).isDirectory();
+    } catch {
+      hasIndexDir = false;
+    }
+    if (rep.entries.length === 0 && !hasIndexDir) continue;
+    const st = indexStatus(rep);
+    if (!st.fresh.length && !st.stale.length && !st.missing.length && !st.orphaned.length) {
+      continue; // nothing checkable; the manifest line already reports problems
+    }
+    const parts = [];
+    if (st.fresh.length) parts.push(`${st.fresh.length} fresh`);
+    if (st.stale.length) parts.push(`stale: ${st.stale.join(", ")}`);
+    if (st.missing.length) parts.push(`not built: ${st.missing.join(", ")}`);
+    if (st.orphaned.length) parts.push(`orphaned: ${st.orphaned.join(", ")}`);
+    if (st.stale.length || st.missing.length || st.orphaned.length) {
+      add(`Reference index (${scope})`, STATUS.WARN, parts.join("; "));
+    } else {
+      add(`Reference index (${scope})`, STATUS.PASS, parts.join("; "));
+    }
   }
 
   // --- Python ---------------------------------------------------------------

@@ -14,6 +14,7 @@ UNRESOLVED status must be resolved before dependent phases execute.
 - **Confidence:** [HIGH / MEDIUM / LOW]
 - **Status:** [UNRESOLVED / APPROVED / REJECTED]
 - **Impact:** [What would change if this assumption is wrong]
+- **Citation:** [optional — ref_id, page, method, confidence; omit rather than fabricate]
 - **Timestamp:** [ISO 8601]
 ```
 

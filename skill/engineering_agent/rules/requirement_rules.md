@@ -25,6 +25,12 @@ Priority: [HIGH / MEDIUM / LOW]
 Verifiable: [Yes — how / No — why not]
 ```
 
+`standard` and `regulation` sources come from the local library (see
+`rules/reference_rules.md`) and carry a citation: reference id plus
+page, method tag, and confidence. A requirement claiming a code or
+standard without a citable passage stays an assumption, not a
+requirement.
+
 ---
 
 ## Step 2 — Identify Missing Critical Requirements
@@ -60,7 +66,7 @@ different designs.
 
 | Signal | Ambiguity Type | Agent Response |
 |--------|---------------|---------------|
-| "normal", "standard", "typical" | Unquantified descriptor | Ask for specific dimension or cite the standard |
+| "normal", "standard", "typical" | Unquantified descriptor | Ask for specific dimension, or cite a retrieved passage as one option among explicitly asked choices (never as the decision) |
 | "near", "close to", "adjacent" | Spatial relationship without dimension | Ask for clearance dimension |
 | "a few", "some", "several" | Unquantified quantity | Ask for exact count |
 | "large", "small", "comfortable" | Relative size | Ask for m² or mm |
@@ -115,6 +121,11 @@ Requirements:
 Assumptions I will use:
   ASM-001: Wall thickness = 200mm exterior, 100mm interior [MEDIUM confidence]
   ASM-002: Layer names: WALLS-EXT, WALLS-INT, DOORS [standard]
+
+Evidence (when the local library was consulted):
+  [REF-ID] p.[N] [method/confidence]: "[verbatim excerpt]"
+  Interpretation: [what this means for the project, separate from the excerpt]
+  Uncertainties: [limits, flags, or unverified locations, spoken plainly]
 
 Missing (needs your input before I can begin):
   1. Where on the south wall should the door be placed?

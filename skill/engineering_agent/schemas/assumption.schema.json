@@ -34,6 +34,17 @@
       "type": "string",
       "description": "Downstream design components affected if this assumption is modified"
     },
+    "citation": {
+      "type": "object",
+      "description": "Optional source passage relevant to this assumption (omit rather than fabricate)",
+      "properties": {
+        "ref_id": { "type": "string" },
+        "page": { "type": ["integer", "null"] },
+        "method": { "type": "string" },
+        "confidence": { "type": "string" }
+      },
+      "required": ["ref_id"]
+    },
     "timestamp": {
       "type": "string",
       "format": "date-time"

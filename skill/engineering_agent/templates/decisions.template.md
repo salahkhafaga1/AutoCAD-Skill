@@ -16,6 +16,7 @@ intent memory of the project.
 - **Dependencies:** [What other elements this affects or depends on]
 - **Alternatives considered:** [What else was considered and why rejected]
 - **Approval:** [auto / user_approved]
+- **Citation:** [optional — ref_id, page, method, confidence; omit rather than fabricate]
 - **Timestamp:** [ISO 8601]
 ```
 

@@ -1,0 +1,4 @@
+# Optional P0.2 Tier-1 PDF tooling. Pinned exact version (approved D1).
+# Install ONLY into the opt-in .venv-ref (gitignored); never global, never
+# into the autocad-mcp venv. The base skill works without this file's contents.
+pypdf==6.20.0

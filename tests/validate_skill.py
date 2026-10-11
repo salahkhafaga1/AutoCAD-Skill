@@ -22,6 +22,8 @@ the repository root.
 """
 
 import importlib.util
+import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -197,6 +199,69 @@ def main():
                 forbidden_hits.append(f"{md.name}: `{pattern}` x{count}")
                 violations.extend(f"{md.name}: forbidden pattern `{pattern}`" for _ in range(count))
 
+    # Skill-only hygiene: the runtime skill must never name OCR engines,
+    # spell the search utility like an MCP tool call, or reference index
+    # paths (tooling internals). Split across literals on purpose, like
+    # FORBIDDEN above: grepping the skill for the joined forms must return
+    # ZERO hits, yet the checker still matches them.
+    FORBIDDEN_SKILL = [
+        "tessera" + "ct",
+        "ref_sea" + "rch(",
+        ".ind" + "ex/",
+    ]
+    for md in md_files:
+        text = md.read_text(encoding="utf-8")
+        for pattern in FORBIDDEN_SKILL:
+            count = text.count(pattern)
+            if count:
+                forbidden_hits.append(f"{md.name}: `{pattern}` x{count}")
+                violations.extend(f"{md.name}: forbidden skill pattern `{pattern}`" for _ in range(count))
+
+    # --- 5. Reference fixtures & committed-index guard -----------------------
+    # Synthetic manifest fixtures (if any) must satisfy the registry schema;
+    # no .index/ directory may ever be committed (indexes are local caches).
+    ref_checked = 0
+    fixtures_dir = REPO_ROOT / "tests" / "fixtures"
+    if fixtures_dir.is_dir():
+        for fixture in sorted(fixtures_dir.glob("manifest-*.json")):
+            ref_checked += 1
+            try:
+                data = json.loads(fixture.read_text(encoding="utf-8"))
+            except ValueError as exc:
+                violations.append(f"tests/fixtures/{fixture.name}: invalid JSON ({exc})")
+                continue
+            entries = data.get("references") if isinstance(data, dict) else None
+            if not isinstance(entries, list):
+                violations.append(f"tests/fixtures/{fixture.name}: root must hold a references array")
+                continue
+            seen_ids = set()
+            for i, entry in enumerate(entries):
+                ref_checked += 1
+                where = f"tests/fixtures/{fixture.name} references[{i}]"
+                if not isinstance(entry, dict):
+                    violations.append(f"{where}: entry must be an object")
+                    continue
+                entry_id = entry.get("id")
+                if not isinstance(entry_id, str) or not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", entry_id):
+                    violations.append(f"{where}.id: required kebab-case id")
+                elif entry_id in seen_ids:
+                    violations.append(f'{where}.id: duplicate id "{entry_id}"')
+                else:
+                    seen_ids.add(entry_id)
+                if not isinstance(entry.get("path"), str) or not entry["path"].strip():
+                    violations.append(f"{where}.path: required non-empty string path")
+                kind = entry.get("kind")
+                if kind is not None and kind not in ("code", "standard", "handbook",
+                                                     "manufacturer", "educational", "other"):
+                    violations.append(f"{where}.kind: unknown document category")
+    skip_dirs = {".git", "node_modules", ".venv", ".venv-ref", "__pycache__",
+                 ".pytest_cache", ".mypy_cache"}
+    for dirpath, dirnames, _filenames in os.walk(REPO_ROOT):
+        dirnames[:] = [d for d in dirnames if d not in skip_dirs]
+        if ".index" in dirnames:
+            rel = str(Path(dirpath, ".index").relative_to(REPO_ROOT)).replace("\\", "/")
+            violations.append(f"{rel}/: committed .index/ directory (indexes are local caches)")
+
     # --- Report -------------------------------------------------------------
     print("== Engineering CAD Agent Skill validation ==")
     print(f"skill root : {SKILL_ROOT}")
@@ -208,6 +273,7 @@ def main():
     print(f"[4] forbidden patterns .......... {'OK' if not forbidden_hits else 'FAIL'}")
     for hit in forbidden_hits:
         print(f"    {hit}")
+    print(f"[5] reference fixtures ............ {'OK' if not any('tests/fixtures' in v or '.index/' in v for v in violations) else 'FAIL'} ({ref_checked} checks)")
     for w in warnings:
         print(f"warning: {w}")
     if violations:

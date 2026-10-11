@@ -25,6 +25,25 @@
 | REQ-003 | One door on south wall, width = 900mm | user | HIGH | [ ] |
 | REQ-004 | Door position: centered on south wall | user | HIGH | [ ] |
 | REQ-005 | All dimensions annotated | user | MEDIUM | [ ] |
+| REQ-006 | Door swing clearance = 900mm minimum | handbook | MEDIUM | [ ] |
+
+---
+
+## Evidence (illustrates the reference-citation convention)
+
+REQ-006 is backed by a library passage; the other requirements are
+user-stated and need no citation:
+
+- **Excerpt (verbatim):** [time-saver-2e] p.[N] [direct-text/low]:
+  "[passage text as retrieved, copied exactly]"
+- **Interpretation:** a 900mm door needs 900mm of clear swing space,
+  which the 6000×4000mm room provides on the south wall.
+- **Uncertainties:** legacy OCR layer, encoding checked against the
+  original page before relying on the figure; handbook guidance only —
+  the applicable mandatory code governs, and the engineer confirms.
+
+If the library had held no passage, REQ-006 would have stayed an
+assumption with confidence instead of a cited requirement.
 
 ---
 

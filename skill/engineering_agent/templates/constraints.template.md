@@ -15,6 +15,7 @@ must be checked before and after any modification that affects the constrained e
 - **Standard/Source:** [building code, user requirement REQ-NNN, engineering judgment]
 - **Priority:** [HIGH (cannot be violated) / MEDIUM / LOW (preference only)]
 - **Verified:** [false / true — timestamp]
+- **Citation:** [optional — ref_id, page, method, confidence; omit rather than fabricate]
 ```
 
 ---

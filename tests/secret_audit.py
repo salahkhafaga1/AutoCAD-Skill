@@ -15,7 +15,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".pytest_cache", ".mypy_cache"}
+SKIP_DIRS = {".git", "node_modules", ".venv", ".venv-ref", "__pycache__", ".pytest_cache", ".mypy_cache"}
 SKIP_EXT = (".png", ".jpg", ".jpeg", ".gif", ".pdf", ".pyc", ".pyo", ".ico", ".zip", ".7z")
 MAX_BYTES = 2_000_000
 

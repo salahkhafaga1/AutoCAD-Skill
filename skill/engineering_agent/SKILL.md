@@ -56,6 +56,9 @@ UNDERSTAND
   → extract requirements
   → detect ambiguity
   → if ambiguous: ASK (stop and wait)
+  → if the request names a standard, code, clearance, or dimension the
+    user did not fully specify: consult the local library per
+    `rules/reference_rules.md` (skip silently when no library exists)
 
 ANALYZE
   → call autocad_status (always first)
@@ -327,3 +330,5 @@ The agent must NEVER:
 - `schemas/` — JSON schemas for project memory files
 - `templates/` — Blank templates for project memory files
 - `examples/simple_room/` — Reference implementation of MVP project
+- `rules/reference_rules.md` — Local engineering library lookup and evidence handling
+- `docs/references.md` (repository docs) — Library setup, indexing, and search usage

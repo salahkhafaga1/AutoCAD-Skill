@@ -41,6 +41,17 @@
       "type": "boolean",
       "default": false
     },
+    "citation": {
+      "type": "object",
+      "description": "Optional source passage behind this constraint (omit rather than fabricate)",
+      "properties": {
+        "ref_id": { "type": "string" },
+        "page": { "type": ["integer", "null"] },
+        "method": { "type": "string" },
+        "confidence": { "type": "string" }
+      },
+      "required": ["ref_id"]
+    },
     "last_checked": {
       "type": "string",
       "format": "date-time"

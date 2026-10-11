@@ -16,6 +16,7 @@ const path = require("path");
 
 const PKG_ROOT = path.resolve(__dirname, "..");
 const REPO_ROOT = path.resolve(PKG_ROOT, "..", "..");
+const { findBanned } = require("../lib/packcheck");
 
 const COPIES = [
   { from: path.join(REPO_ROOT, "skill", "engineering_agent"), to: path.join(PKG_ROOT, "skill", "engineering_agent"), dir: true },
@@ -23,15 +24,7 @@ const COPIES = [
   { from: path.join(REPO_ROOT, "CHANGELOG.md"), to: path.join(PKG_ROOT, "CHANGELOG.md") },
 ];
 
-/** Directories/files that must never be packaged. */
-const BANNED = [
-  /(^|\/)node_modules(\/|$)/,
-  /(^|\/)__pycache__(\/|$)/,
-  /(^|\/)\.venv(\/|$)/,
-  /(^|\/)\.git(\/|$)/,
-  /\.(log|pyc|pyo)$/i,
-  /(^|\/)\.env(\.|$)/,
-];
+/* Warn-tier denylist now lives in lib/packcheck.js (single source). */
 
 function main() {
   for (const c of COPIES) {
@@ -56,20 +49,21 @@ function main() {
   }
 
   // Report (do not fail on) anything that looks like it should not ship.
-  let suspicious = 0;
-  const walk = (dir, rel) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const r = rel ? `${rel}/${entry.name}` : entry.name;
-      if (BANNED.some((re) => re.test(r))) {
-        console.warn(`prepack: WARNING excluded-looking path present: ${r}`);
-        suspicious++;
-        continue;
-      }
-      if (entry.isDirectory()) walk(path.join(dir, entry.name), r);
+  // Reference content (PDFs, indexes, manifests, reference venvs) fails
+  // the pack instead: shipping user documents is never acceptable.
+  const banned = findBanned(PKG_ROOT);
+  const fails = banned.filter((b) => b.tier === "fail");
+  const warns = banned.filter((b) => b.tier === "warn");
+  for (const b of warns) {
+    console.warn(`prepack: WARNING excluded-looking path present: ${b.rel}`);
+  }
+  if (warns.length) console.warn(`prepack: ${warns.length} suspicious path(s) found — check the npm pack file list.`);
+  if (fails.length) {
+    for (const b of fails) {
+      console.error(`prepack: REFUSING to pack reference content: ${b.rel}`);
     }
-  };
-  walk(PKG_ROOT, "");
-  if (suspicious) console.warn(`prepack: ${suspicious} suspicious path(s) found — check the npm pack file list.`);
+    process.exit(1);
+  }
 }
 
 main();

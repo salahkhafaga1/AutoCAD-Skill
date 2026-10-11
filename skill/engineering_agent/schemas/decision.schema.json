@@ -46,6 +46,17 @@
       "enum": ["auto", "user_approved"],
       "default": "auto"
     },
+    "citation": {
+      "type": "object",
+      "description": "Optional source passage supporting this decision (omit rather than fabricate)",
+      "properties": {
+        "ref_id": { "type": "string" },
+        "page": { "type": ["integer", "null"] },
+        "method": { "type": "string" },
+        "confidence": { "type": "string" }
+      },
+      "required": ["ref_id"]
+    },
     "timestamp": {
       "type": "string",
       "format": "date-time"
