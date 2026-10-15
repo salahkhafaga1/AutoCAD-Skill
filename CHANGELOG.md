@@ -10,7 +10,7 @@ follows [Semantic Versioning](https://semver.org/):
 - **MAJOR** — breaking behavioral or structural changes.
 
 The npm package (`installer/npm/package.json`) is versioned separately from
-the skill: 0.2.0 is the skill, 0.4.0 is the installer, and the tool contract
+the skill: 0.2.0 is the skill, 0.5.0 is the installer, and the tool contract
 version is 2. A package-only release does not change the skill version.
 
 No change is recorded here until it actually exists in the repository.
@@ -18,6 +18,12 @@ No change is recorded here until it actually exists in the repository.
 ---
 
 ## [Unreleased]
+
+Nothing pending yet.
+
+---
+
+## [0.5.0] - 2026-10-15
 
 Option A AutoCAD bridge capabilities (independent implementation; tool
 contract v1 → v2). Adds four MCP tools and documents them; no existing tool
