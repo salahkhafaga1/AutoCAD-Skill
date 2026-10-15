@@ -166,12 +166,12 @@ Test-level detail and evidence rules: [`docs/verification.md`](docs/verification
 - **Level 1 — static validation: PASS** — `tests/validate_skill.py` validates
   documentation and repo docs against the actual MCP schemas (tool names,
   parameter names, referenced files, forbidden/obsolete patterns).
-- **Level 2 — offline MCP tests: PASS** — 105 tests against the external
+- **Level 2 — offline MCP tests: PASS** — 146 tests against the external
   autocad-mcp checkout, no AutoCAD required.
 - **Level 3 — MCP wiring: PASS (post-restructure)** — the skill was
   re-discovered and loaded live from `skill/engineering_agent/` (project
   config path, ID `engineering_agent`), and the MCP server still exposes all
-  29 tools.
+  33 tools.
 - **Level 4 — live AutoCAD: PENDING** — this project does **not** claim
   production-ready live AutoCAD testing. AutoCAD is not installed on the
   development machine; live end-to-end testing remains a separate step.

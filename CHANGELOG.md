@@ -11,7 +11,7 @@ follows [Semantic Versioning](https://semver.org/):
 
 The npm package (`installer/npm/package.json`) is versioned separately from
 the skill: 0.2.0 is the skill, 0.4.0 is the installer, and the tool contract
-version is 1. A package-only release does not change the skill version.
+version is 2. A package-only release does not change the skill version.
 
 No change is recorded here until it actually exists in the repository.
 
@@ -19,7 +19,29 @@ No change is recorded here until it actually exists in the repository.
 
 ## [Unreleased]
 
-Nothing pending yet.
+Option A AutoCAD bridge capabilities (independent implementation; tool
+contract v1 → v2). Adds four MCP tools and documents them; no existing tool
+changes behavior.
+
+### Added
+- `draw_batch` — create up to 200 entities in one call, all validated before
+  any geometry is created, grouped as a single undo step, with exact
+  partial-failure reporting (`created`, `created_count`, `failed_index`).
+- `draw_mtext` — multiline text entity.
+- `set_layer_linetype` — set a layer's linetype (must already be loaded) and/or
+  lineweight (a standard millimetre value).
+- `save_drawing_explicit` — save to an explicit absolute `.dwg`/`.dxf` path;
+  never overwrites and never creates folders.
+- `command_active` / `require_idle` busy precheck (`CMDACTIVE`) on the two
+  long-running write tools; best-effort, unknown state does not block.
+
+### Changed
+- `skill.json` `toolContractVersion` 1 → 2; `tool_contracts.md`, `SKILL.md`,
+  and `rules/risk_rules.md` updated for the 33-tool surface.
+
+### Notes
+- Independent implementation; no code copied from `autocad_bridge.py`.
+- Live AutoCAD testing of the new tools is still pending (no AutoCAD here).
 
 ---
 

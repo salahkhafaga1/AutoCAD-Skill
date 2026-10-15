@@ -70,6 +70,14 @@ Source of Truth: `autocad_mcp/acad_core.py`
   - `allow_overwrite` (boolean, optional, default: `false`): Must be set to `true` to overwrite an existing checkpoint/file.
 - **Key Output:** `path: string`, `format: "dwg" | "dxf"`, `drawing: document_info`
 
+### `save_drawing_explicit`
+- **Purpose:** Saves the active drawing to an explicit **absolute** `.dwg` or `.dxf` path. **Never overwrites** an existing file.
+- **Type:** Mutating | **Risk:** 🟢 GREEN
+- **Parameters:**
+  - `path` (string, required): Absolute `.dwg` or `.dxf` path whose parent folder already exists.
+- **Behavior:** Refuses a relative path, a wrong extension, an existing file, or a missing parent folder (folders are **never** created). A `.dxf` target is written as DXF. `SaveAs` retargets the active document, so the reply reports the path the drawing became.
+- **Key Output:** `path: string`, `format: "dwg" | "dxf"`, `drawing: document_info`
+
 ---
 
 ## 3. Drawing State & Query Tools
@@ -107,6 +115,15 @@ Source of Truth: `autocad_mcp/acad_core.py`
   - `frozen` (boolean, optional): Cannot freeze the current active layer.
   - `visible` (boolean, optional): `false` turns layer off while remaining thawed.
 - **Key Output:** `layer: layer_state`, `changed: list[string]`
+
+### `set_layer_linetype`
+- **Purpose:** Sets the linetype and/or lineweight of an existing layer. At least one property is required.
+- **Type:** Mutating | **Risk:** 🟢 GREEN
+- **Parameters:**
+  - `name` (string, required): Existing layer name.
+  - `linetype` (string, optional): A linetype that is **already loaded** in the drawing; an unloaded name is refused.
+  - `lineweight_mm` (number, optional): One of AutoCAD's standard lineweights in mm (for example `0.25`, `0.35`, `0.5`); a non-standard value is refused.
+- **Key Output:** `layer: {name, linetype, lineweight_mm}`, `changed: list[string]`
 
 ### `query_entities`
 - **Purpose:** Lists entities in model or paper space up to `max_scan` entities.
@@ -195,6 +212,19 @@ Source of Truth: `autocad_mcp/acad_core.py`
   - `space` (string, optional, `"model"` | `"paper"`).
 - **Key Output:** `entity: {handle, object_name: "AcDbText", layer, ...}`
 
+### `draw_mtext`
+- **Purpose:** Adds a multiline text (MText) entity.
+- **Type:** Mutating | **Risk:** 🟢 GREEN
+- **Parameters:**
+  - `text` (string, required): Non-empty text string.
+  - `insertion_point_mm` (point array, required): `[x, y]` or `[x, y, z]` in mm.
+  - `height_mm` (number, required): Text height in mm ($>0$).
+  - `width_mm` (number, optional, default: `0.0`): Wrapping width in mm; `0` means an unconstrained box.
+  - `rotation_deg` (number, optional, default: `0.0`): Degrees CCW from +X.
+  - `layer` (string, optional): Target layer name.
+  - `space` (string, optional, `"model"` | `"paper"`).
+- **Key Output:** `entity: {handle, object_name: "AcDbMText", layer, ...}`, `width_mm: float`, `rotation_deg: float`
+
 ### `draw_arc`
 - **Purpose:** Adds an arc entity sweeping counter-clockwise.
 - **Type:** Mutating | **Risk:** 🟢 GREEN
@@ -252,6 +282,26 @@ Source of Truth: `autocad_mcp/acad_core.py`
   - `layer` (string, optional): Target layer name.
   - `space` (string, optional, `"model"` | `"paper"`).
 - **Key Output:** `entity: {handle, object_name: "AcDbRotatedDimension", ...}`, `measurement_mm: float` (AutoCAD's computed measurement between the supplied points, in mm — it does not read back any other entity's coordinates)
+
+### `draw_batch`
+- **Purpose:** Creates many entities in one call. Every item is validated, and every referenced layer resolved, **before** any geometry is created; the whole batch is grouped as a single undo step.
+- **Type:** Mutating | **Risk:** 🟢 GREEN for 1–4 items, 🟡 YELLOW for 5–10, 🔴 RED for **>10** (the standard modification scale applies — there is **no** batch exemption).
+- **Parameters:**
+  - `operations` (array, required): 1–200 items; each is `{kind, ...fields}` using the same field names and units as the matching single-entity draw tool.
+  - `space` (string, optional, `"model"` | `"paper"`).
+- **Item kinds and their fields** (all points in mm, all angles in degrees):
+  ```
+  line      : start_mm, end_mm
+  circle    : center_mm, radius_mm
+  polyline  : vertices_mm — at least 2, single z; closed?
+  text      : text, insertion_point_mm, height_mm
+  arc       : center_mm, radius_mm, start_angle_deg, end_angle_deg
+  ellipse   : center_mm, major_axis_mm, minor_axis_mm, rotation_deg?
+  point     : point_mm
+  any item may also carry: layer?
+  ```
+- **Partial failure:** If validation fails, **nothing** is created. If a COM create fails mid-batch, the call returns `ok: false` with `created` (what was made), `created_count`, `failed_index`, and `failed_kind`. Created entities share one undo group; **nothing is rolled back automatically** — a single Undo removes them.
+- **Key Output:** `created: list[{index, kind, entity}]`, `created_count: int`, `requested: int`, `failed_index: int | null`, `space: string`, `undo_grouped: bool`
 
 ---
 

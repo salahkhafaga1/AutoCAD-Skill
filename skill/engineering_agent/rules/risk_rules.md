@@ -21,13 +21,13 @@ Proceed without requesting approval. Verify after execution.
 | Take screenshot | `capture_screenshot` |
 | Create a new layer | `create_layer` |
 | Set current layer | `set_current_layer` |
-| Modify layer properties | `set_layer_properties` |
+| Modify layer properties | `set_layer_properties`, `set_layer_linetype` |
 | Draw geometry in an **empty area** with no existing nearby entities | `draw_line`, `draw_circle`, `draw_arc`, `draw_ellipse`, `draw_polyline`, `draw_point` |
-| Add text labels and annotations | `draw_text` |
+| Add text labels and annotations | `draw_text`, `draw_mtext` |
 | Add measurement dimensions | `add_linear_dimension` |
 | Copy an entity to an empty area | `copy_entity` |
 | Change entity layer | `set_entity_layer` |
-| Save the drawing | `save_active_drawing`, `save_drawing_as` |
+| Save the drawing | `save_active_drawing`, `save_drawing_as`, `save_drawing_explicit` |
 | Create a new drawing | `create_new_drawing` |
 | Open a drawing | `open_drawing` |
 
@@ -51,6 +51,7 @@ next phase until YELLOW operations are confirmed correct.
 | Copying near existing geometry | Risk of overlap or duplicate | Inspect after; verify no overlap |
 | Inserting a block | Block must exist; scale must be correct | Query entity; verify position |
 | Any operation affecting 5–10 entities | Higher complexity, higher error risk | Full layer audit after |
+| Batch creation of 5–10 entities | Multi-entity write in one call | Query the batch back before continuing |
 | Dimensioning a finished phase | Must match requirements | Compare all measurements to requirements |
 | Making an assumption about a dimension | Assumption must be recorded and flagged | Record in assumptions.md; flag as UNRESOLVED |
 
@@ -76,6 +77,8 @@ complete. Record the assumption if the agent used a default value.
 | Any operation the agent is uncertain about | Uncertainty is a stop condition | "I am not certain [X]. Before proceeding, I need you to confirm [Y]." |
 | Major spatial reorganization | Risk of cascading constraint violations | "Reorganizing [element group] will affect [list of dependencies]. Please review the impact and approve." |
 | Phase entry when plan was flagged for approval | Plan review point | "The plan designated Phase [N] as requiring approval before execution. Do you approve?" |
+
+`draw_batch` follows this modification scale exactly — 1–4 items 🟢, 5–10 🟡, and **more than 10 🔴** — with no batch-specific exemption.
 
 ### erase_entity Exception (Temporary Verification Artifacts Only)
 

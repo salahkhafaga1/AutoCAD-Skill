@@ -42,7 +42,7 @@ The MCP layer is a **stable, unchanging contract**. The agent reasons on top of 
 Never add tool calls outside what autocad-mcp exposes. Never bypass the scoped
 tool interface.
 
-Refer to `tool_contracts.md` as the **single authoritative reference** for all 29
+Refer to `tool_contracts.md` as the **single authoritative reference** for all 33
 MCP tool names, parameter schemas, outputs, and risk levels.
 
 ---
@@ -325,7 +325,7 @@ The agent must NEVER:
 
 ## References
 
-- `tool_contracts.md` — Authoritative parameter schemas for all 29 MCP tools
+- `tool_contracts.md` — Authoritative parameter schemas for all 33 MCP tools
 - `workflows/` — Step-by-step workflow for each operating mode
 - `rules/` — Specific rules for requirements, planning, verification, risk, stops
 - `schemas/` — JSON schemas for project memory files

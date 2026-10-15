@@ -3,6 +3,6 @@
   "id": "engineering-cad",
   "version": "0.2.0",
   "entry": "SKILL.md",
-  "toolContractVersion": 1,
+  "toolContractVersion": 2,
   "requiresMcpServer": "autocad-mcp"
 }
